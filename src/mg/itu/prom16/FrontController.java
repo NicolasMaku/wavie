@@ -22,7 +22,7 @@ public class FrontController extends HttpServlet {
     }
 
     protected void processRequest(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        String url = req.getRequestURL().toString();
+        String url = req.getRequestURI();
         PrintWriter out = resp.getWriter();
         out.println("URL : " + url);
     }
