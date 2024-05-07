@@ -13,18 +13,16 @@ import java.io.PrintWriter;
 public class FrontController extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        super.doGet(req, resp);
         processRequest(req,resp);
     }
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        super.doPost(req, resp);
         processRequest(req,resp);
     }
 
     protected void processRequest(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        String url = req.getRequestURI();
+        String url = req.getRequestURL().toString();
         PrintWriter out = resp.getWriter();
         out.println("URL : " + url);
     }
