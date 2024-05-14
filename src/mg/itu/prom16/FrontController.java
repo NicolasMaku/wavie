@@ -44,19 +44,17 @@ public class FrontController extends HttpServlet {
             controllerList = new ArrayList<>();
             String packageController = this.getInitParameter("package-controller");
 
-            String path = packageController.replace('.','/');
+            String packageName = packageController.replace('.', '/');
             ClassLoader cl = Thread.currentThread().getContextClassLoader();
-            java.net.URL resource = cl.getResource(path);
-            assert resource != null;
 
-            File dossier = new File(resource.getFile());
+            File dossier = new File(cl.getResource(packageName).getFile().replace("%20"," "));
 
             if (dossier.exists()) {
                 String[] files = dossier.list();
                 assert files != null;
                 for (String file : files) {
-                    if (file.endsWith(".java")) {
-                        String className = packageController + file.substring(0, file.length() - 5);
+                    if (file.endsWith(".class")) {
+                        String className = packageController + "." + file.substring(0, file.length() - 6);
                         Class<?> clazz = Class.forName(className);
                         if (clazz.isAnnotationPresent(Controller.class))
                             controllerClass.add(clazz);
