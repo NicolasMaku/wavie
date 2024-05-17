@@ -1,4 +1,4 @@
-**Bienvenu dans le framework Wavie**
+# Bienvenu dans le framework Wavie
 
 Les etapes à suivres sont:
 
