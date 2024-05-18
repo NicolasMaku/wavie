@@ -59,7 +59,7 @@ public class FrontController extends HttpServlet {
             for (Method method : clazz.getDeclaredMethods()) {
                 if (method.isAnnotationPresent(Get.class)) {
                     Mapping element = new Mapping(clazz.getName(), method.getName()) ;
-                    map.put(method.getAnnotation(Get.class).url(), element);
+                    map.put(method.getAnnotation(Get.class).value(), element);
                 }
 
             }
