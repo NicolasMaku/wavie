@@ -13,3 +13,6 @@ Sprint1:
 - Annotez vos controller avec l'annotation @controller
 
 Sprint2:
+- Declarez le nom de votre projet en tant que paramettre dans le fichier web.xml
+  - nom: project-name
+  - nom du servlet sur lequel l'associer: FrontController

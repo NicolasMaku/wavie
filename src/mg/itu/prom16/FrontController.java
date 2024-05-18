@@ -95,17 +95,18 @@ public class FrontController extends HttpServlet {
 //        for (Class<?> clazz : controllerList)
 //            out.println(clazz.getSimpleName());
 
-        for (String method : get_method(url))
-            out.println(method);
+        for (Mapping method : get_method(url))
+            out.println("Method: " + method.method + " ; Controller: " + method.controller);
 
     }
 
-    protected List<String> get_method(String url) {
-        List<String> methods = new ArrayList<>();
+    protected List<Mapping> get_method(String url) {
+        List<Mapping> methods = new ArrayList<>();
 
         for(Map.Entry<String, Mapping> entry : map.entrySet()) {
-            if (entry.getKey().equals(url)) {
-                methods.add(entry.getValue().method);
+            String debut_url = "/"+ this.getInitParameter("project-name") + "/";
+            if ((debut_url + entry.getKey()).equals(url)) {
+                methods.add(entry.getValue());
             }
         }
 
