@@ -6,20 +6,26 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import mg.itu.prom16.annotations.Controller;
+import mg.itu.prom16.annotations.Get;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class FrontController extends HttpServlet {
     protected static List<Class<?>> controllerList = null;
+    protected HashMap<String, Mapping> map = null;
 
     @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
 
+        // Determiner la listes des controllers
         controllerList = new ArrayList<>();
         String packageController = this.getInitParameter("package-controller");
 
@@ -46,6 +52,19 @@ public class FrontController extends HttpServlet {
                 }
             }
         }
+
+        // construire le hashmap
+        map = new HashMap<>();
+        for (Class<?> clazz : controllerList) {
+            for (Method method : clazz.getDeclaredMethods()) {
+                if (method.isAnnotationPresent(Get.class)) {
+                    Mapping element = new Mapping(clazz.getName(), method.getName()) ;
+                    map.put(method.getAnnotation(Get.class).url(), element);
+                }
+
+            }
+        }
+
     }
 
     @Override
@@ -72,10 +91,24 @@ public class FrontController extends HttpServlet {
         PrintWriter out = resp.getWriter();
         out.println("URL : " + url);
 
-//        lister les controller dispo
-        for (Class<?> clazz : controllerList)
-            out.println(clazz.getSimpleName());
+        // lister les controller dispo
+//        for (Class<?> clazz : controllerList)
+//            out.println(clazz.getSimpleName());
 
+        for (String method : get_method(url))
+            out.println(method);
 
+    }
+
+    protected List<String> get_method(String url) {
+        List<String> methods = new ArrayList<>();
+
+        for(Map.Entry<String, Mapping> entry : map.entrySet()) {
+            if (entry.getKey().equals(url)) {
+                methods.add(entry.getValue().method);
+            }
+        }
+
+        return methods;
     }
 }
