@@ -10,3 +10,6 @@ Sprint1:
 - initialiser parametre package des controller dans web.xml:
     - nom: package-controller
     - nom du servlet sur lequel l'associer: FrontController
+- Annotez vos controller avec l'annotation @controller
+
+Sprint2:
