@@ -97,6 +97,8 @@ public class FrontController extends HttpServlet {
 
         for (Mapping method : get_method(url))
             out.println("Method: " + method.method + " ; Controller: " + method.controller);
+        if (get_method(url).isEmpty())
+            out.println("Aucune methode GET n'est disponible ici: 404 not found");
 
     }
 

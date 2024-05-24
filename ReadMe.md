@@ -16,3 +16,4 @@ Sprint2:
 - Declarez le nom de votre projet en tant que paramettre dans le fichier web.xml
   - nom: project-name
   - nom du servlet sur lequel l'associer: FrontController
+- Ajouter une value dans l'annotation @Get de vos methode de controller qui permettrons de les acceder par url
