@@ -88,6 +88,7 @@ public class FrontController extends HttpServlet {
         }
     }
 
+    @SuppressWarnings("deprecation")
     protected void processRequest(HttpServletRequest req, HttpServletResponse resp) throws IOException, ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException {
         // Montrer l'url saisie
         String url = req.getRequestURI();
@@ -96,10 +97,10 @@ public class FrontController extends HttpServlet {
 
         // Execution de la methode
         for (Mapping method : get_method(url)) {
-            out.println("Method: " + method.method + " ; Controller: " + method.controller);
+//            out.println("Method: " + method.method + " ; Controller: " + method.controller);
             Class<?> clazz = Class.forName(method.controller);
-            Method methode = clazz.getMethod(method.method, req.getClass(), resp.getClass());
-            out.println(methode.invoke(clazz.newInstance(),req,resp));
+            Method methode = clazz.getMethod(method.method);
+            out.println(methode.invoke(clazz.newInstance()));
         }
         if (get_method(url).isEmpty())
             out.println("Aucune methode GET n'est disponible ici: 404 not found");
