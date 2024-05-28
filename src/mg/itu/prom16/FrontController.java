@@ -11,6 +11,7 @@ import mg.itu.prom16.annotations.Get;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -71,7 +72,8 @@ public class FrontController extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         try {
             processRequest(req,resp);
-        } catch (ClassNotFoundException e) {
+        } catch (ClassNotFoundException | NoSuchMethodException | InstantiationException | IllegalAccessException |
+                 InvocationTargetException e) {
             throw new RuntimeException(e);
         }
     }
@@ -80,23 +82,25 @@ public class FrontController extends HttpServlet {
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         try {
             processRequest(req,resp);
-        } catch (ClassNotFoundException e) {
+        } catch (ClassNotFoundException | NoSuchMethodException | InstantiationException | IllegalAccessException |
+                 InvocationTargetException e) {
             throw new RuntimeException(e);
         }
     }
 
-    protected void processRequest(HttpServletRequest req, HttpServletResponse resp) throws IOException, ClassNotFoundException {
-//        Montrer l'url saisie
+    protected void processRequest(HttpServletRequest req, HttpServletResponse resp) throws IOException, ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException {
+        // Montrer l'url saisie
         String url = req.getRequestURI();
         PrintWriter out = resp.getWriter();
         out.println("URL : " + url);
 
-        // lister les controller dispo
-//        for (Class<?> clazz : controllerList)
-//            out.println(clazz.getSimpleName());
-
-        for (Mapping method : get_method(url))
+        // Execution de la methode
+        for (Mapping method : get_method(url)) {
             out.println("Method: " + method.method + " ; Controller: " + method.controller);
+            Class<?> clazz = Class.forName(method.controller);
+            Method methode = clazz.getMethod(method.method, req.getClass(), resp.getClass());
+            out.println(methode.invoke(clazz.newInstance(),req,resp));
+        }
         if (get_method(url).isEmpty())
             out.println("Aucune methode GET n'est disponible ici: 404 not found");
 
