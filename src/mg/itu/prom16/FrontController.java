@@ -27,6 +27,15 @@ public class FrontController extends HttpServlet {
         super.init(config);
 
         // Determiner la listes des controllers
+        getControllerList();
+
+        // construire le hashmap
+        buildControllerMap();
+
+    }
+
+    private void getControllerList() {
+        List<Class<?>> liste_controller = new ArrayList<>();
         controllerList = new ArrayList<>();
         String packageController = this.getInitParameter("package-controller");
 
@@ -53,8 +62,9 @@ public class FrontController extends HttpServlet {
                 }
             }
         }
+    }
 
-        // construire le hashmap
+    private void buildControllerMap() {
         map = new HashMap<>();
         for (Class<?> clazz : controllerList) {
             for (Method method : clazz.getDeclaredMethods()) {
@@ -65,9 +75,7 @@ public class FrontController extends HttpServlet {
 
             }
         }
-
     }
-
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         try {
@@ -97,16 +105,18 @@ public class FrontController extends HttpServlet {
 
         // Execution de la methode
         for (Mapping method : get_method(url)) {
-//            out.println("Method: " + method.method + " ; Controller: " + method.controller);
+            // Affichage du nom de la methode et nom du controller
+            out.println("Method: " + method.method + " ; Controller: " + method.controller);
             Class<?> clazz = Class.forName(method.controller);
             Method methode = clazz.getMethod(method.method);
-            out.println(methode.invoke(clazz.newInstance()));
+            out.println("Contenu : " + methode.invoke(clazz.newInstance()));
         }
         if (get_method(url).isEmpty())
             out.println("Aucune methode GET n'est disponible ici: 404 not found");
 
     }
 
+    // Donne la liste des mapping(methodName, Controller) si elle trouve des methode correp au url
     protected List<Mapping> get_method(String url) {
         List<Mapping> methods = new ArrayList<>();
 
