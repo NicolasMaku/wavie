@@ -11,6 +11,7 @@ import mg.itu.prom16.annotations.Get;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -26,6 +27,15 @@ public class FrontController extends HttpServlet {
         super.init(config);
 
         // Determiner la listes des controllers
+        getControllerList();
+
+        // construire le hashmap
+        buildControllerMap();
+
+    }
+
+    private void getControllerList() {
+        List<Class<?>> liste_controller = new ArrayList<>();
         controllerList = new ArrayList<>();
         String packageController = this.getInitParameter("package-controller");
 
@@ -52,8 +62,9 @@ public class FrontController extends HttpServlet {
                 }
             }
         }
+    }
 
-        // construire le hashmap
+    private void buildControllerMap() {
         map = new HashMap<>();
         for (Class<?> clazz : controllerList) {
             for (Method method : clazz.getDeclaredMethods()) {
@@ -64,14 +75,13 @@ public class FrontController extends HttpServlet {
 
             }
         }
-
     }
-
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         try {
             processRequest(req,resp);
-        } catch (ClassNotFoundException e) {
+        } catch (ClassNotFoundException | NoSuchMethodException | InstantiationException | IllegalAccessException |
+                 InvocationTargetException e) {
             throw new RuntimeException(e);
         }
     }
@@ -80,28 +90,33 @@ public class FrontController extends HttpServlet {
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         try {
             processRequest(req,resp);
-        } catch (ClassNotFoundException e) {
+        } catch (ClassNotFoundException | NoSuchMethodException | InstantiationException | IllegalAccessException |
+                 InvocationTargetException e) {
             throw new RuntimeException(e);
         }
     }
 
-    protected void processRequest(HttpServletRequest req, HttpServletResponse resp) throws IOException, ClassNotFoundException {
-//        Montrer l'url saisie
+    @SuppressWarnings("deprecation")
+    protected void processRequest(HttpServletRequest req, HttpServletResponse resp) throws IOException, ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException {
+        // Montrer l'url saisie
         String url = req.getRequestURI();
         PrintWriter out = resp.getWriter();
         out.println("URL : " + url);
 
-        // lister les controller dispo
-//        for (Class<?> clazz : controllerList)
-//            out.println(clazz.getSimpleName());
-
-        for (Mapping method : get_method(url))
+        // Execution de la methode
+        for (Mapping method : get_method(url)) {
+            // Affichage du nom de la methode et nom du controller
             out.println("Method: " + method.method + " ; Controller: " + method.controller);
+            Class<?> clazz = Class.forName(method.controller);
+            Method methode = clazz.getMethod(method.method);
+            out.println("Contenu : " + methode.invoke(clazz.newInstance()));
+        }
         if (get_method(url).isEmpty())
             out.println("Aucune methode GET n'est disponible ici: 404 not found");
 
     }
 
+    // Donne la liste des mapping(methodName, Controller) si elle trouve des methode correp au url
     protected List<Mapping> get_method(String url) {
         List<Mapping> methods = new ArrayList<>();
 
