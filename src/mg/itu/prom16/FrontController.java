@@ -114,10 +114,17 @@ public class FrontController extends HttpServlet {
             if (reponse instanceof ModelView) {
                 ModelView mv = (ModelView) reponse;
                 RequestDispatcher dispatcher = getServletContext().getRequestDispatcher(mv.url);
-                mv.data.forEach((cle , value) -> {
-                    req.setAttribute(cle,value);
-                });
 
+                try {
+                    for(Map.Entry<String , Object> entry : mv.data.entrySet()) {
+                        req.setAttribute(entry.getKey(), entry.getValue());
+                    }
+                } catch (Exception e) {
+                    out.println(e.getMessage());
+                }
+//                out.println(mv.url);
+
+//                resp.sendRedirect(mv.url);
                 dispatcher.forward(req,resp);
             } else {
                 out.println("Contenu : " + reponse);
