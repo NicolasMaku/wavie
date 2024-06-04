@@ -1,5 +1,6 @@
 package mg.itu.prom16;
 
+import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
@@ -97,7 +98,7 @@ public class FrontController extends HttpServlet {
     }
 
     @SuppressWarnings("deprecation")
-    protected void processRequest(HttpServletRequest req, HttpServletResponse resp) throws IOException, ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException {
+    protected void processRequest(HttpServletRequest req, HttpServletResponse resp) throws IOException, ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException, ServletException {
         // Montrer l'url saisie
         String url = req.getRequestURI();
         PrintWriter out = resp.getWriter();
@@ -109,7 +110,22 @@ public class FrontController extends HttpServlet {
             out.println("Method: " + method.method + " ; Controller: " + method.controller);
             Class<?> clazz = Class.forName(method.controller);
             Method methode = clazz.getMethod(method.method);
-            out.println("Contenu : " + methode.invoke(clazz.newInstance()));
+            Object reponse = methode.invoke(clazz.newInstance());
+            if (reponse instanceof ModelView) {
+                ModelView mv = (ModelView) reponse;
+                RequestDispatcher dispatcher = getServletContext().getRequestDispatcher(mv.url);
+
+                try {
+                    for(Map.Entry<String , Object> entry : mv.data.entrySet()) {
+                        req.setAttribute(entry.getKey(), entry.getValue());
+                    }
+                } catch (Exception e) {
+                    out.println(e.getMessage());
+                }
+                dispatcher.forward(req,resp);
+            } else {
+                out.println("Contenu : " + reponse);
+            }
         }
         if (get_method(url).isEmpty())
             out.println("Aucune methode GET n'est disponible ici: 404 not found");
