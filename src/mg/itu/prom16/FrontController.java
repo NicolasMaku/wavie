@@ -1,5 +1,6 @@
 package mg.itu.prom16;
 
+import com.sun.source.doctree.ThrowsTree;
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletException;
@@ -22,20 +23,26 @@ import java.util.Map;
 public class FrontController extends HttpServlet {
     protected static List<Class<?>> controllerList = null;
     protected HashMap<String, Mapping> map = null;
+    protected List<Exception> exceptions = new ArrayList<>();
 
     @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
 
-        // Determiner la listes des controllers
-        getControllerList();
+        try {
+            // Determiner la listes des controllers
+            getControllerList();
 
-        // construire le hashmap
-        buildControllerMap();
+            // construire le hashmap
+            buildControllerMap();
+        } catch (Exception e) {
+            exceptions.add(e);
+        }
+
 
     }
 
-    private void getControllerList() {
+    private void getControllerList() throws Exception {
         List<Class<?>> liste_controller = new ArrayList<>();
         controllerList = new ArrayList<>();
         String packageController = this.getInitParameter("package-controller");
@@ -43,7 +50,12 @@ public class FrontController extends HttpServlet {
         String packageName = packageController.replace('.', '/');
         ClassLoader cl = Thread.currentThread().getContextClassLoader();
 
-        File dossier = new File(cl.getResource(packageName).getFile().replace("%20"," "));
+        File dossier = null;
+        try {
+            dossier = new File(cl.getResource(packageName).getFile().replace("%20"," "));
+        } catch (Exception e) {
+            throw new Exception("Le package n'existe pas!");
+        }
 
         if (dossier.exists()) {
             String[] files = dossier.list();
@@ -65,13 +77,17 @@ public class FrontController extends HttpServlet {
         }
     }
 
-    private void buildControllerMap() {
+    private void buildControllerMap() throws Exception {
         map = new HashMap<>();
         for (Class<?> clazz : controllerList) {
             for (Method method : clazz.getDeclaredMethods()) {
                 if (method.isAnnotationPresent(Get.class)) {
                     Mapping element = new Mapping(clazz.getName(), method.getName()) ;
+                    if (map.containsKey(method.getAnnotation(Get.class).value()))
+                        throw new Exception("Doublons de url controller");
+
                     map.put(method.getAnnotation(Get.class).value(), element);
+
                 }
 
             }
@@ -98,37 +114,48 @@ public class FrontController extends HttpServlet {
     }
 
     @SuppressWarnings("deprecation")
-    protected void processRequest(HttpServletRequest req, HttpServletResponse resp) throws IOException, ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException, ServletException {
+    protected void processRequest(HttpServletRequest req, HttpServletResponse resp) throws IOException, NoSuchMethodException, InstantiationException, IllegalAccessException, ClassNotFoundException, InvocationTargetException, ServletException {
         // Montrer l'url saisie
         String url = req.getRequestURI();
+        resp.setCharacterEncoding("UTF-8");
         PrintWriter out = resp.getWriter();
+
         out.println("URL : " + url);
+        out.println("");
+        if (!exceptions.isEmpty()) {
+            out.println("Les exceptions suivantes ont ete rencontrees:");
+            for(Exception e : exceptions )
+                out.println(e.getMessage());
+        } else {
+            // Execution de la methode
+            for (Mapping method : get_method(url)) {
+                // Affichage du nom de la methode et nom du controller
+                out.println("Method: " + method.method + " ; Controller: " + method.controller);
+                Class<?> clazz = Class.forName(method.controller);
+                Method methode = clazz.getMethod(method.method);
+                Object reponse = methode.invoke(clazz.newInstance());
+                if (reponse instanceof ModelView) {
+                    ModelView mv = (ModelView) reponse;
+                    RequestDispatcher dispatcher = getServletContext().getRequestDispatcher(mv.url);
 
-        // Execution de la methode
-        for (Mapping method : get_method(url)) {
-            // Affichage du nom de la methode et nom du controller
-            out.println("Method: " + method.method + " ; Controller: " + method.controller);
-            Class<?> clazz = Class.forName(method.controller);
-            Method methode = clazz.getMethod(method.method);
-            Object reponse = methode.invoke(clazz.newInstance());
-            if (reponse instanceof ModelView) {
-                ModelView mv = (ModelView) reponse;
-                RequestDispatcher dispatcher = getServletContext().getRequestDispatcher(mv.url);
-
-                try {
-                    for(Map.Entry<String , Object> entry : mv.data.entrySet()) {
-                        req.setAttribute(entry.getKey(), entry.getValue());
+                    try {
+                        for(Map.Entry<String , Object> entry : mv.data.entrySet()) {
+                            req.setAttribute(entry.getKey(), entry.getValue());
+                        }
+                    } catch (Exception e) {
+                        out.println(e.getMessage());
                     }
-                } catch (Exception e) {
-                    out.println(e.getMessage());
+                    dispatcher.forward(req,resp);
+
+                } else if (reponse instanceof String) {
+                    out.println("Contenu : " + reponse);
+                } else {
+                    out.println("Le type de retour est inconnu");
                 }
-                dispatcher.forward(req,resp);
-            } else {
-                out.println("Contenu : " + reponse);
             }
+            if (get_method(url).isEmpty())
+                out.println("Aucune methode GET n'est disponible ici: 404 not found");
         }
-        if (get_method(url).isEmpty())
-            out.println("Aucune methode GET n'est disponible ici: 404 not found");
 
     }
 
@@ -137,7 +164,7 @@ public class FrontController extends HttpServlet {
         List<Mapping> methods = new ArrayList<>();
 
         for(Map.Entry<String, Mapping> entry : map.entrySet()) {
-            String debut_url = "/"+ this.getInitParameter("project-name") + "/";
+            String debut_url = getServletContext().getContextPath() + "/";
             if ((debut_url + entry.getKey()).equals(url)) {
                 methods.add(entry.getValue());
             }
