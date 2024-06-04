@@ -122,9 +122,6 @@ public class FrontController extends HttpServlet {
                 } catch (Exception e) {
                     out.println(e.getMessage());
                 }
-//                out.println(mv.url);
-
-//                resp.sendRedirect(mv.url);
                 dispatcher.forward(req,resp);
             } else {
                 out.println("Contenu : " + reponse);
