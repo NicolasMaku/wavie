@@ -23,7 +23,8 @@ import java.util.Map;
 public class FrontController extends HttpServlet {
     protected static List<Class<?>> controllerList = null;
     protected HashMap<String, Mapping> map = null;
-    protected List<Exception> exceptions = new ArrayList<>();
+    
+    // protected List<Exception> exceptions = new ArrayList<>();
 
     @Override
     public void init(ServletConfig config) throws ServletException {
@@ -36,7 +37,7 @@ public class FrontController extends HttpServlet {
             // construire le hashmap
             buildControllerMap();
         } catch (Exception e) {
-            exceptions.add(e);
+            throw new ServletException(e.getMessage());
         }
 
 
@@ -97,6 +98,8 @@ public class FrontController extends HttpServlet {
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         try {
             processRequest(req,resp);
+        } catch (ServletException f) {
+            throw new ServletException(f.getMessage());
         } catch (ClassNotFoundException | NoSuchMethodException | InstantiationException | IllegalAccessException |
                  InvocationTargetException e) {
             throw new RuntimeException(e);
@@ -122,40 +125,36 @@ public class FrontController extends HttpServlet {
 
         out.println("URL : " + url);
         out.println("");
-        if (!exceptions.isEmpty()) {
-            out.println("Les exceptions suivantes ont ete rencontrees:");
-            for(Exception e : exceptions )
-                out.println(e.getMessage());
-        } else {
-            // Execution de la methode
-            for (Mapping method : get_method(url)) {
-                // Affichage du nom de la methode et nom du controller
-                out.println("Method: " + method.method + " ; Controller: " + method.controller);
-                Class<?> clazz = Class.forName(method.controller);
-                Method methode = clazz.getMethod(method.method);
-                Object reponse = methode.invoke(clazz.newInstance());
-                if (reponse instanceof ModelView) {
-                    ModelView mv = (ModelView) reponse;
-                    RequestDispatcher dispatcher = getServletContext().getRequestDispatcher(mv.url);
 
-                    try {
-                        for(Map.Entry<String , Object> entry : mv.data.entrySet()) {
-                            req.setAttribute(entry.getKey(), entry.getValue());
-                        }
-                    } catch (Exception e) {
-                        out.println(e.getMessage());
+        // Execution de la methode
+        for (Mapping method : get_method(url)) {
+            // Affichage du nom de la methode et nom du controller
+            out.println("Method: " + method.method + " ; Controller: " + method.controller);
+            Class<?> clazz = Class.forName(method.controller);
+            Method methode = clazz.getMethod(method.method);
+            Object reponse = methode.invoke(clazz.newInstance());
+            if (reponse instanceof ModelView) {
+                ModelView mv = (ModelView) reponse;
+                RequestDispatcher dispatcher = getServletContext().getRequestDispatcher(mv.url);
+
+                try {
+                    for(Map.Entry<String , Object> entry : mv.data.entrySet()) {
+                        req.setAttribute(entry.getKey(), entry.getValue());
                     }
-                    dispatcher.forward(req,resp);
-
-                } else if (reponse instanceof String) {
-                    out.println("Contenu : " + reponse);
-                } else {
-                    out.println("Le type de retour est inconnu");
+                } catch (Exception e) {
+                    out.println(e.getMessage());
                 }
+                dispatcher.forward(req,resp);
+
+            } else if (reponse instanceof String) {
+                out.println("Contenu : " + reponse);
+            } else {
+                out.println("Le type de retour est inconnu");
             }
-            if (get_method(url).isEmpty())
-                out.println("Aucune methode GET n'est disponible ici: 404 not found");
         }
+        if (get_method(url).isEmpty())
+            out.println("Aucune methode GET n'est disponible ici: 404 not found");
+
 
     }
 
