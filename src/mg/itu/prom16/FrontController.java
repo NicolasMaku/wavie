@@ -23,7 +23,7 @@ import java.util.Map;
 public class FrontController extends HttpServlet {
     protected static List<Class<?>> controllerList = null;
     protected HashMap<String, Mapping> map = null;
-    
+
     // protected List<Exception> exceptions = new ArrayList<>();
 
     @Override
@@ -55,7 +55,7 @@ public class FrontController extends HttpServlet {
         try {
             dossier = new File(cl.getResource(packageName).getFile().replace("%20"," "));
         } catch (Exception e) {
-            throw new Exception("Le package n'existe pas!");
+            throw new Exception("Le package de controller '" + packageController + "' n'existe pas!");
         }
 
         if (dossier.exists()) {
@@ -96,65 +96,55 @@ public class FrontController extends HttpServlet {
     }
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        try {
-            processRequest(req,resp);
-        } catch (ServletException f) {
-            throw new ServletException(f.getMessage());
-        } catch (ClassNotFoundException | NoSuchMethodException | InstantiationException | IllegalAccessException |
-                 InvocationTargetException e) {
-            throw new RuntimeException(e);
-        }
+        processRequest(req,resp);
     }
 
     @Override
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        try {
-            processRequest(req,resp);
-        } catch (ClassNotFoundException | NoSuchMethodException | InstantiationException | IllegalAccessException |
-                 InvocationTargetException e) {
-            throw new RuntimeException(e);
-        }
+        processRequest(req,resp);
     }
 
     @SuppressWarnings("deprecation")
-    protected void processRequest(HttpServletRequest req, HttpServletResponse resp) throws IOException, NoSuchMethodException, InstantiationException, IllegalAccessException, ClassNotFoundException, InvocationTargetException, ServletException {
+    protected void processRequest(HttpServletRequest req, HttpServletResponse resp) throws IOException, ServletException {
         // Montrer l'url saisie
         String url = req.getRequestURI();
         resp.setCharacterEncoding("UTF-8");
         PrintWriter out = resp.getWriter();
 
-        out.println("URL : " + url);
-        out.println("");
-
         // Execution de la methode
-        for (Mapping method : get_method(url)) {
-            // Affichage du nom de la methode et nom du controller
-            out.println("Method: " + method.method + " ; Controller: " + method.controller);
-            Class<?> clazz = Class.forName(method.controller);
-            Method methode = clazz.getMethod(method.method);
-            Object reponse = methode.invoke(clazz.newInstance());
-            if (reponse instanceof ModelView) {
-                ModelView mv = (ModelView) reponse;
-                RequestDispatcher dispatcher = getServletContext().getRequestDispatcher(mv.url);
+        if (!get_method(url).isEmpty()){
 
-                try {
-                    for(Map.Entry<String , Object> entry : mv.data.entrySet()) {
-                        req.setAttribute(entry.getKey(), entry.getValue());
+            try {
+                for (Mapping method : get_method(url)) {
+
+                    Class<?> clazz = Class.forName(method.controller);
+                    Method methode = clazz.getMethod(method.method);
+                    Object reponse = methode.invoke(clazz.newInstance());
+                    if (reponse instanceof ModelView) {
+                        ModelView mv = (ModelView) reponse;
+                        RequestDispatcher dispatcher = getServletContext().getRequestDispatcher(mv.url);
+
+                        for(Map.Entry<String , Object> entry : mv.data.entrySet()) {
+                            req.setAttribute(entry.getKey(), entry.getValue());
+                        }
+
+                        dispatcher.forward(req,resp);
+
+                    } else if (reponse instanceof String) {
+                        out.println("URL : " + url + "\n");
+                        // Affichage du nom de la methode et nom du controller
+                        out.println("Method: " + method.method + " ; Controller: " + method.controller);
+
+                        out.println("Contenu : " + reponse);
+                    } else {
+                        throw new ServletException("Le type de retour est inconnu");
                     }
-                } catch (Exception e) {
-                    out.println(e.getMessage());
                 }
-                dispatcher.forward(req,resp);
-
-            } else if (reponse instanceof String) {
-                out.println("Contenu : " + reponse);
-            } else {
-                out.println("Le type de retour est inconnu");
+            } catch (Exception e) {
+                throw new ServletException(e.getMessage());
             }
         }
-        if (get_method(url).isEmpty())
-            out.println("Aucune methode GET n'est disponible ici: 404 not found");
-
+        else throw new ServletException("Aucune methode GET n'est disponible ici: 404 not found");
 
     }
 
