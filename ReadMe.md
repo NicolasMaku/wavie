@@ -17,3 +17,16 @@ Sprint2:
   - nom: project-name
   - nom du servlet sur lequel l'associer: FrontController
 - Ajouter une value dans l'annotation @Get de vos methode de controller qui permettrons de les acceder par url
+
+Sprint3(sujet):
+- lister dans un hashMap les methods de controller
+- Montrer la methode dans un url
+
+Sprint4(sujet):
+- invoquer la methode (String, ModelView)
+
+Sprint5(sujet):
+- Gestion des erreurs
+
+Sprint6(sujet):
+-formulaire vers controller et printer dans page
