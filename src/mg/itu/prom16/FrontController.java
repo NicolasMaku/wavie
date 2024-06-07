@@ -23,9 +23,7 @@ import java.util.Map;
 public class FrontController extends HttpServlet {
     protected static List<Class<?>> controllerList = null;
     protected HashMap<String, Mapping> map = null;
-
-    // protected List<Exception> exceptions = new ArrayList<>();
-
+    
     @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
@@ -144,7 +142,10 @@ public class FrontController extends HttpServlet {
                 throw new ServletException(e.getMessage());
             }
         }
-        else throw new ServletException("Aucune methode GET n'est disponible ici: 404 not found");
+        else {
+            resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Aucune methode GET n'est disponible dans l'url " + url );
+
+        }
 
     }
 
