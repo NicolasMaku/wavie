@@ -9,12 +9,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import mg.itu.prom16.annotations.Controller;
 import mg.itu.prom16.annotations.Get;
+import mg.itu.prom16.annotations.Param;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -102,7 +104,7 @@ public class FrontController extends HttpServlet {
         processRequest(req,resp);
     }
 
-    @SuppressWarnings("deprecation")
+
     protected void processRequest(HttpServletRequest req, HttpServletResponse resp) throws IOException, ServletException {
         // Montrer l'url saisie
         String url = req.getRequestURI();
@@ -110,43 +112,46 @@ public class FrontController extends HttpServlet {
         PrintWriter out = resp.getWriter();
 
         // Execution de la methode
-        if (!get_method(url).isEmpty()){
+        if (get_method(url).isEmpty())
+            resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Aucune methode GET n'est disponible dans l'url " + url );
 
-            try {
-                for (Mapping method : get_method(url)) {
+//        try {
+            for (Mapping method : get_method(url)) {
+                Object reponse;
+                try {
+                    reponse = method.execMethod(req);
+                } catch (Exception e) {
+                    throw new ServletException(e.getMessage());
+                }
+                if (reponse instanceof ModelView) {
+                    ModelView mv = (ModelView) reponse;
+                    RequestDispatcher dispatcher = getServletContext().getRequestDispatcher(mv.url);
 
-                    Class<?> clazz = Class.forName(method.controller);
-                    Method methode = clazz.getMethod(method.method);
-                    Object reponse = methode.invoke(clazz.newInstance());
-                    if (reponse instanceof ModelView) {
-                        ModelView mv = (ModelView) reponse;
-                        RequestDispatcher dispatcher = getServletContext().getRequestDispatcher(mv.url);
+                    for(Map.Entry<String , Object> entry : mv.data.entrySet()) {
+                        req.setAttribute(entry.getKey(), entry.getValue());
+                    }
 
-                        for(Map.Entry<String , Object> entry : mv.data.entrySet()) {
-                            req.setAttribute(entry.getKey(), entry.getValue());
-                        }
+                    dispatcher.forward(req,resp);
 
-                        dispatcher.forward(req,resp);
 
-                    } else if (reponse instanceof String) {
+                } else if (reponse instanceof String) {
+                    try {
                         out.println("URL : " + url + "\n");
                         // Affichage du nom de la methode et nom du controller
                         out.println("Method: " + method.method + " ; Controller: " + method.controller);
 
                         out.println("Contenu : " + reponse);
-                    } else {
-                        throw new ServletException("Le type de retour est inconnu");
+                        return;
+                    } catch (Exception e) {
+                        throw new ServletException(e.getMessage());
                     }
+                } else {
+                    throw new ServletException("Le type de retour est inconnu");
                 }
-            } catch (Exception e) {
-                throw new ServletException(e.getMessage());
             }
-        }
-        else {
-            resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Aucune methode GET n'est disponible dans l'url " + url );
-
-        }
-
+//        } catch (Exception e) {
+//            throw new ServletException(e.getMessage());
+//        }
     }
 
     // Donne la liste des mapping(methodName, Controller) si elle trouve des methode correp au url
