@@ -29,4 +29,4 @@ Sprint5(sujet):
 - Gestion des erreurs
 
 Sprint6(sujet):
--formulaire vers controller et printer dans page
+-formulaire vers controller et printer dans page les variables demandee
