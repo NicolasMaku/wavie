@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import mg.itu.prom16.annotations.Model;
 import mg.itu.prom16.annotations.Param;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -83,25 +84,33 @@ public class Mapping {
     @SuppressWarnings("deprecation")
     Object getMethodObjet(Parameter parameter, HttpServletRequest req) throws ServletException {
         Class<?> classeParametre = parameter.getType();
+        String prefix = parameter.getAnnotation(Model.class).value();
+        Field[] fields = classeParametre.getDeclaredFields();
         Object objet = null;
         try {
             try { objet = classeParametre.newInstance(); } catch (Exception e) { throw new ServletException("Pas de constructeur par defaut"); }
 
             Map<String, String[]> parameterMap = req.getParameterMap();
             for (Map.Entry<String, String[]> entry : parameterMap.entrySet()) {
-                Method[] listeMethode = classeParametre.getDeclaredMethods();
-                Method setter = null;
-                for(Method meth : listeMethode) {
 
-                    if (meth.getName().equals("set" + capitalizeFirstLetter(entry.getKey()))) {
-                        setter = meth;
-                        break;
+                Method setter = null;
+                for(Field field: fields) {
+                    if (( prefix + "." + field.getName()).equals(entry.getKey())) {
+                        setter = searchMethod(classeParametre, "set" + capitalizeFirstLetter(field.getName()));
                     }
                 }
-                if (setter == null)
-                    throw new ServletException("la methode " + "set" + capitalizeFirstLetter(entry.getKey() + "() n'existe pas dans la classe " + objet.getClass()));
 
-                setter.invoke(objet, parse(setter.getParameterTypes()[0],entry.getValue()[0]));
+                if (setter == null) {
+//                    String all = "";
+//                    for(Field field: fields) {
+//                        all += field.getName() + ",";
+//                    }
+//                    all += classeParametre.getName();
+//                    throw new ServletException(all);
+//                    throw new ServletException("la methode " + "set" + capitalizeFirstLetter(fields[0].getName()) + "() n'existe pas dans la classe " + objet.getClass());
+                }
+                else
+                    setter.invoke(objet, parse(setter.getParameterTypes()[0],entry.getValue()[0]));
             }
 
         } catch (Exception e) {
@@ -118,6 +127,18 @@ public class Mapping {
         } else {
             return clazz.cast(value);
         }
+    }
+
+    Method searchMethod(Class<?> clazz, String methodName) {
+        Method[] listeMethode = clazz.getDeclaredMethods();
+        for(Method meth : listeMethode) {
+
+            if (meth.getName().equals(methodName)) {
+                return meth;
+            }
+        }
+
+        return null;
     }
 
     public static String capitalizeFirstLetter(String word) {
