@@ -5,10 +5,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import mg.itu.prom16.annotations.Model;
 import mg.itu.prom16.annotations.Param;
 
+import javax.swing.text.DateFormatter;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Map;
 
 public class Mapping {
@@ -101,13 +105,7 @@ public class Mapping {
                 }
 
                 if (setter == null) {
-//                    String all = "";
-//                    for(Field field: fields) {
-//                        all += field.getName() + ",";
-//                    }
-//                    all += classeParametre.getName();
-//                    throw new ServletException(all);
-//                    throw new ServletException("la methode " + "set" + capitalizeFirstLetter(fields[0].getName()) + "() n'existe pas dans la classe " + objet.getClass());
+
                 }
                 else
                     setter.invoke(objet, parse(setter.getParameterTypes()[0],entry.getValue()[0]));
@@ -119,11 +117,27 @@ public class Mapping {
         return objet;
     }
 
-    public Object parse(Class<?> clazz, String value) {
+    public Object parse(Class<?> clazz, String value) throws ServletException {
         if (clazz.equals(int.class)) {
-            return Integer.parseInt(value);
+            try {
+                return Integer.parseInt(value);
+            } catch (NumberFormatException e) {
+                throw new ServletException("Veuiller entrer un nombre valide");
+            }
+
         } else if (clazz.equals(String.class)) {
+            if (value.equals(""))
+                return "null";
             return value;
+        } else if (clazz.equals(Date.class)) {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+            Date date = null;
+            try {
+                date = sdf.parse(value);
+            } catch (ParseException e) {
+                throw new ServletException("Le format de la date est fausse");
+            }
+            return date;
         } else {
             return clazz.cast(value);
         }
