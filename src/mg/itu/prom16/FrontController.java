@@ -7,6 +7,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import mg.itu.prom16.annotations.Controller;
 import mg.itu.prom16.annotations.Get;
 import mg.itu.prom16.annotations.Param;
@@ -25,7 +26,7 @@ import java.util.Map;
 public class FrontController extends HttpServlet {
     protected static List<Class<?>> controllerList = null;
     protected HashMap<String, Mapping> map = null;
-    
+
     @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
@@ -33,7 +34,6 @@ public class FrontController extends HttpServlet {
         try {
             // Determiner la listes des controllers
             getControllerList();
-
             // construire le hashmap
             buildControllerMap();
         } catch (Exception e) {

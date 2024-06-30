@@ -30,3 +30,13 @@ Sprint5(sujet):
 
 Sprint6(sujet):
 -formulaire vers controller et printer dans page les variables demandee
+
+Sprint7:
+
+Controle:
+- Ajouter une exception lorsqu'il n'y a aucune annotation sur l'argument de la methode
+
+Sprin8:
+- Creer un moyen d'acceder à la session sans y toucher directement dans les methodes annoté controller
+- Creer la classe customSession qui sera notre intelocuteur entre l'HttpSession et notre methode
+- Un nouvel argument possible CustomSession session

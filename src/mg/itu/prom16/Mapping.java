@@ -4,6 +4,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import mg.itu.prom16.annotations.Model;
 import mg.itu.prom16.annotations.Param;
+import util.CustomSession;
 
 import javax.swing.text.DateFormatter;
 import java.lang.reflect.Field;
@@ -46,6 +47,7 @@ public class Mapping {
             Class<?> clazz = Class.forName(controller);
             Method[] methodes = clazz.getDeclaredMethods();
             Method oneMethod = null;
+            CustomSession customSession = null;
 
             for(Method meth : methodes) {
                 if (meth.getName().equals(method))
@@ -67,13 +69,23 @@ public class Mapping {
                         } catch (Exception e) {
                             throw new ServletException(e.getMessage());
                         }
-                    }
-                    else {
-                        arguments[i] = parse(classes[i] ,req.getParameter(parameters[i].getName()));
+                    } else if (parameters[i].getType().equals(CustomSession.class)) {
+                        customSession = new CustomSession();
+                        customSession.fromHttpSession(req.getSession());
+                        arguments[i] = customSession;
+                    } else {
+//                        arguments[i] = parse(classes[i] ,req.getParameter(parameters[i].getName()));
+                        throw new ServletException("ETU002554 existe un argument qui n'est pas annotee");
                     }
                 }
 
-                return oneMethod.invoke(clazz.newInstance(),arguments);
+                Object retour =  oneMethod.invoke(clazz.newInstance(),arguments);
+
+                if (customSession != null) {
+                    customSession.toHttpSession(req.getSession());
+                }
+
+                return retour;
             } catch (Exception e) {
                 throw new ServletException(e.getMessage());
             }
