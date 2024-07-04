@@ -45,6 +45,7 @@ public class Mapping {
     public Object execMethod(HttpServletRequest req) throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException, ServletException {
         try {
             Class<?> clazz = Class.forName(controller);
+
             Method[] methodes = clazz.getDeclaredMethods();
             Method oneMethod = null;
             CustomSession customSession = null;
@@ -70,8 +71,8 @@ public class Mapping {
                             throw new ServletException(e.getMessage());
                         }
                     } else if (parameters[i].getType().equals(CustomSession.class)) {
-                        customSession = new CustomSession();
-                        customSession.fromHttpSession(req.getSession());
+                        customSession = new CustomSession(req.getSession());
+//                        customSession.fromHttpSession(req.getSession());
                         arguments[i] = customSession;
                     } else {
 //                        arguments[i] = parse(classes[i] ,req.getParameter(parameters[i].getName()));
@@ -79,11 +80,23 @@ public class Mapping {
                     }
                 }
 
-                Object retour =  oneMethod.invoke(clazz.newInstance(),arguments);
+                Object controllerInstance = clazz.newInstance();
 
-                if (customSession != null) {
-                    customSession.toHttpSession(req.getSession());
+                // tester si la classe controller possede un attribut customSession
+                Field[] fields = clazz.getDeclaredFields();
+                for (Field field : fields) {
+                    if (field.getType().equals(CustomSession.class)) {
+                        customSession = new CustomSession(req.getSession());
+                        field.setAccessible(true);
+                        field.set(controllerInstance ,customSession);
+                    }
                 }
+
+                Object retour =  oneMethod.invoke(controllerInstance,arguments);
+
+//                if (customSession != null) {
+//                    customSession.toHttpSession(req.getSession());
+//                }
 
                 return retour;
             } catch (Exception e) {
