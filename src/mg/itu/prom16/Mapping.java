@@ -94,10 +94,6 @@ public class Mapping {
 
                 Object retour =  oneMethod.invoke(controllerInstance,arguments);
 
-//                if (customSession != null) {
-//                    customSession.toHttpSession(req.getSession());
-//                }
-
                 return retour;
             } catch (Exception e) {
                 throw new ServletException(e.getMessage());
