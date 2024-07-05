@@ -4,6 +4,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import mg.itu.prom16.annotations.Model;
 import mg.itu.prom16.annotations.Param;
+import util.CustomSession;
 
 import javax.swing.text.DateFormatter;
 import java.lang.reflect.Field;
@@ -44,8 +45,10 @@ public class Mapping {
     public Object execMethod(HttpServletRequest req) throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException, ServletException {
         try {
             Class<?> clazz = Class.forName(controller);
+
             Method[] methodes = clazz.getDeclaredMethods();
             Method oneMethod = null;
+            CustomSession customSession = null;
 
             for(Method meth : methodes) {
                 if (meth.getName().equals(method))
@@ -67,13 +70,31 @@ public class Mapping {
                         } catch (Exception e) {
                             throw new ServletException(e.getMessage());
                         }
-                    }
-                    else {
-                        arguments[i] = parse(classes[i] ,req.getParameter(parameters[i].getName()));
+                    } else if (parameters[i].getType().equals(CustomSession.class)) {
+                        customSession = new CustomSession(req.getSession());
+//                        customSession.fromHttpSession(req.getSession());
+                        arguments[i] = customSession;
+                    } else {
+//                        arguments[i] = parse(classes[i] ,req.getParameter(parameters[i].getName()));
+                        throw new ServletException("ETU002554 existe un argument qui n'est pas annotee");
                     }
                 }
 
-                return oneMethod.invoke(clazz.newInstance(),arguments);
+                Object controllerInstance = clazz.newInstance();
+
+                // tester si la classe controller possede un attribut customSession
+                Field[] fields = clazz.getDeclaredFields();
+                for (Field field : fields) {
+                    if (field.getType().equals(CustomSession.class)) {
+                        customSession = new CustomSession(req.getSession());
+                        field.setAccessible(true);
+                        field.set(controllerInstance ,customSession);
+                    }
+                }
+
+                Object retour =  oneMethod.invoke(controllerInstance,arguments);
+
+                return retour;
             } catch (Exception e) {
                 throw new ServletException(e.getMessage());
             }
