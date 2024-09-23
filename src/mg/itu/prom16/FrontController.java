@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpSession;
 import mg.itu.prom16.annotations.Controller;
 import mg.itu.prom16.annotations.Get;
 import mg.itu.prom16.annotations.Param;
+import mg.itu.prom16.annotations.Restapi;
 
 import java.io.File;
 import java.io.IOException;
@@ -88,6 +89,10 @@ public class FrontController extends HttpServlet {
                         throw new Exception("Doublons de url controller");
 
                     map.put(method.getAnnotation(Get.class).value(), element);
+
+                }
+
+                if (method.isAnnotationPresent(Restapi.class)) {
 
                 }
 
