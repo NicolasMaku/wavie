@@ -1,5 +1,6 @@
 package mg.itu.prom16;
 
+import com.google.gson.Gson;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import mg.itu.prom16.annotations.Model;
@@ -20,6 +21,8 @@ public class Mapping {
     String controller;
     String method;
 
+    Boolean isRest;
+
     public String getController() {
         return controller;
     }
@@ -36,9 +39,18 @@ public class Mapping {
         this.method = method;
     }
 
+    public Boolean getRest() {
+        return isRest;
+    }
+
+    public void setRest(Boolean rest) {
+        isRest = rest;
+    }
+
     public Mapping(String controller, String method) {
         this.controller = controller;
         this.method = method;
+        this.isRest = false;
     }
 
     @SuppressWarnings("deprecation")
@@ -93,6 +105,11 @@ public class Mapping {
                 }
 
                 Object retour =  oneMethod.invoke(controllerInstance,arguments);
+
+                if (isRest) {
+                    Gson gson = new Gson();
+                    retour = gson.toJson(retour);
+                }
 
                 return retour;
             } catch (Exception e) {
