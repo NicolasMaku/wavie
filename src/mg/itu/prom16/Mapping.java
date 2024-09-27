@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import mg.itu.prom16.annotations.Model;
 import mg.itu.prom16.annotations.Param;
+import mg.itu.prom16.serializer.MyJson;
 import util.CustomSession;
 
 import javax.swing.text.DateFormatter;
@@ -107,8 +108,8 @@ public class Mapping {
                 Object retour =  oneMethod.invoke(controllerInstance,arguments);
 
                 if (isRest) {
-                    Gson gson = new Gson();
-                    retour = gson.toJson(retour);
+                    MyJson gson = new MyJson();
+                    retour = gson.getGson().toJson(retour);
                 }
 
                 return retour;
