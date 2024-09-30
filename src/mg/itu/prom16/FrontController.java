@@ -1,6 +1,6 @@
 package mg.itu.prom16;
 
-import com.sun.source.doctree.ThrowsTree;
+
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletException;
@@ -86,12 +86,16 @@ public class FrontController extends HttpServlet {
                     Mapping element = new Mapping(clazz.getName(), method.getName()) ;
                     if (map.containsKey(method.getAnnotation(Get.class).value()))
                         throw new Exception("Doublons de url controller");
-
+                    if (method.isAnnotationPresent(Restapi.class)) {
+                        element.setRest(true);
+                    }
                     map.put(method.getAnnotation(Get.class).value(), element);
 
                 }
 
+
             }
+
         }
     }
     @Override
@@ -115,43 +119,43 @@ public class FrontController extends HttpServlet {
         if (get_method(url).isEmpty())
             resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Aucune methode GET n'est disponible dans l'url " + url );
 
-//        try {
-            for (Mapping method : get_method(url)) {
-                Object reponse;
+        for (Mapping method : get_method(url)) {
+            Object reponse;
+            try {
+                reponse = method.execMethod(req);
+            } catch (Exception e) {
+                throw new ServletException(e.getMessage());
+            }
+            if (method.isRest) {
+                resp.setContentType("application/json");
+                out.println(reponse);
+            }
+            else if (reponse instanceof ModelView) {
+                ModelView mv = (ModelView) reponse;
+                RequestDispatcher dispatcher = getServletContext().getRequestDispatcher(mv.url);
+
+                for(Map.Entry<String , Object> entry : mv.data.entrySet()) {
+                    req.setAttribute(entry.getKey(), entry.getValue());
+                }
+
+                dispatcher.forward(req,resp);
+
+            } else if (reponse instanceof String) {
                 try {
-                    reponse = method.execMethod(req);
+                    out.println("URL : " + url + "\n");
+                    // Affichage du nom de la methode et nom du controller
+                    out.println("Method: " + method.method + " ; Controller: " + method.controller);
+
+                    out.println("Contenu : " + reponse);
+                    return;
                 } catch (Exception e) {
                     throw new ServletException(e.getMessage());
                 }
-                if (reponse instanceof ModelView) {
-                    ModelView mv = (ModelView) reponse;
-                    RequestDispatcher dispatcher = getServletContext().getRequestDispatcher(mv.url);
-
-                    for(Map.Entry<String , Object> entry : mv.data.entrySet()) {
-                        req.setAttribute(entry.getKey(), entry.getValue());
-                    }
-
-                    dispatcher.forward(req,resp);
-
-
-                } else if (reponse instanceof String) {
-                    try {
-                        out.println("URL : " + url + "\n");
-                        // Affichage du nom de la methode et nom du controller
-                        out.println("Method: " + method.method + " ; Controller: " + method.controller);
-
-                        out.println("Contenu : " + reponse);
-                        return;
-                    } catch (Exception e) {
-                        throw new ServletException(e.getMessage());
-                    }
-                } else {
-                    throw new ServletException("Le type de retour est inconnu");
-                }
+            } else {
+                throw new ServletException("Le type de retour est inconnu");
             }
-//        } catch (Exception e) {
-//            throw new ServletException(e.getMessage());
-//        }
+        }
+
     }
 
     // Donne la liste des mapping(methodName, Controller) si elle trouve des methode correp au url
