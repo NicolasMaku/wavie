@@ -11,7 +11,6 @@ import jakarta.servlet.http.HttpSession;
 import mg.itu.prom16.annotations.Controller;
 import mg.itu.prom16.annotations.Get;
 import mg.itu.prom16.annotations.Param;
-import mg.itu.prom16.annotations.Restapi;
 
 import java.io.File;
 import java.io.IOException;
