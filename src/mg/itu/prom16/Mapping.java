@@ -3,6 +3,7 @@ package mg.itu.prom16;
 import com.google.gson.Gson;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
+import mg.itu.prom16.annotations.Get;
 import mg.itu.prom16.annotations.Model;
 import mg.itu.prom16.annotations.Param;
 import mg.itu.prom16.serializer.MyJson;
@@ -21,8 +22,8 @@ import java.util.Map;
 public class Mapping {
     String controller;
     String method;
-
     Boolean isRest;
+    Class<?> verb;
 
     public String getController() {
         return controller;
@@ -48,14 +49,29 @@ public class Mapping {
         isRest = rest;
     }
 
-    public Mapping(String controller, String method) {
+    public Class<?> getVerb() {
+        return verb;
+    }
+
+    public void setVerb(Class<?> verb) {
+        this.verb = verb;
+    }
+
+    public Mapping(String controller, String method, Class<?> verb) {
         this.controller = controller;
         this.method = method;
         this.isRest = false;
+        this.verb = verb;
     }
 
     @SuppressWarnings("deprecation")
     public Object execMethod(HttpServletRequest req) throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException, ServletException {
+        if (!this.verb.getSimpleName().equalsIgnoreCase(req.getMethod()))
+            throw new ServletException("La methode http est differente de celle du controller (methode)");
+
+        System.out.println("interne : " + this.verb.getSimpleName());
+        System.out.println("http : " + req.getMethod());
+
         try {
             Class<?> clazz = Class.forName(controller);
 
@@ -70,6 +86,7 @@ public class Mapping {
             Class<?>[] classes = oneMethod.getParameterTypes();
 
             try {
+
                 assert oneMethod != null;
                 Parameter[] parameters = oneMethod.getParameters();
                 Object[] arguments = new Object[parameters.length];
@@ -105,7 +122,14 @@ public class Mapping {
                     }
                 }
 
-                Object retour =  oneMethod.invoke(controllerInstance,arguments);
+
+                Object retour = null;
+                try {
+                    retour =  oneMethod.invoke(controllerInstance,arguments);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
 
                 if (isRest) {
                     MyJson gson = new MyJson();
@@ -114,6 +138,7 @@ public class Mapping {
 
                 return retour;
             } catch (Exception e) {
+                System.out.println("tato");
                 throw new ServletException(e.getMessage());
             }
 
