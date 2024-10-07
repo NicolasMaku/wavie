@@ -8,9 +8,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
-import mg.itu.prom16.annotations.Controller;
-import mg.itu.prom16.annotations.Get;
-import mg.itu.prom16.annotations.Param;
+import mg.itu.prom16.annotations.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -82,18 +80,25 @@ public class FrontController extends HttpServlet {
         map = new HashMap<>();
         for (Class<?> clazz : controllerList) {
             for (Method method : clazz.getDeclaredMethods()) {
-                if (method.isAnnotationPresent(Get.class)) {
-                    Mapping element = new Mapping(clazz.getName(), method.getName()) ;
-                    if (map.containsKey(method.getAnnotation(Get.class).value()))
-                        throw new Exception("Doublons de url controller");
-                    if (method.isAnnotationPresent(Restapi.class)) {
-                        element.setRest(true);
-                    }
-                    map.put(method.getAnnotation(Get.class).value(), element);
-
+                if (method.getAnnotations().length == 0) {
+                    continue;
                 }
 
+                if (method.isAnnotationPresent(Url.class)) {
+                    Mapping element = new Mapping(clazz.getName(), method.getName(), null) ;
+                    String urlValue = method.getAnnotation(Url.class).value();
+                    if (method.isAnnotationPresent(Restapi.class)) element.setRest(true);
 
+                    if (map.containsKey(urlValue))
+                        throw new Exception("Doublons de url controller");
+
+                    if (method.isAnnotationPresent(Post.class))
+                        element.setVerb(Post.class);
+                    else
+                        element.setVerb(Get.class);
+
+                    map.put(urlValue, element);
+                }
             }
 
         }
