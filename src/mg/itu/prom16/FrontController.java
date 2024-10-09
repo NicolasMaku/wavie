@@ -85,24 +85,49 @@ public class FrontController extends HttpServlet {
                 }
 
                 if (method.isAnnotationPresent(Url.class)) {
-                    Mapping element = new Mapping(clazz.getName(), method.getName(), null) ;
+                    Mapping element = null ;
                     String urlValue = method.getAnnotation(Url.class).value();
-                    if (method.isAnnotationPresent(Restapi.class)) element.setRest(true);
+//                    if (method.isAnnotationPresent(Restapi.class)) element.setRest(true);
 
-                    if (map.containsKey(urlValue))
-                        throw new Exception("Doublons de url controller");
+                    Class<?> verb = getVerb(method);
+                    if (map.containsKey(urlValue)) {
+                        element = map.get(urlValue);
+                        if (element.isVerbAvalaible(verb) == null) {
+                            element.getVerbActions().add(new VerbAction(verb, method.getName()));
+                        }
+                        else throw new Exception("Doublons de url controller");
+                    }
+                    else {
+                        element = new Mapping(clazz.getName());
+                        element.verbActions.add(new VerbAction(verb, method.getName()));
+                        System.out.println("Nisy vaovao kaa");
+                        map.put(urlValue, element);
+                    }
 
-                    if (method.isAnnotationPresent(Post.class))
-                        element.setVerb(Post.class);
-                    else
-                        element.setVerb(Get.class);
-
-                    map.put(urlValue, element);
                 }
             }
 
         }
     }
+
+//    protected boolean actionIsValid(String urlValue, Class<?> verb) {
+//        if (!map.containsKey(urlValue))
+//            return true;
+//
+//        Mapping mapping = map.get(urlValue);
+//        if (mapping.getVerbAction().getVerb().equals(verb))
+//            return false;
+//        else return true;
+//
+//    }
+
+    protected Class<?> getVerb(Method method) {
+        if (method.isAnnotationPresent(Post.class))
+            return Post.class;
+        else
+            return Get.class;
+    }
+
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
         processRequest(req,resp);
@@ -127,15 +152,15 @@ public class FrontController extends HttpServlet {
         for (Mapping method : get_method(url)) {
             Object reponse;
             try {
-                reponse = method.execMethod(req);
+                reponse = method.execMethod(req, resp);
             } catch (Exception e) {
                 throw new ServletException(e.getMessage());
             }
-            if (method.isRest) {
-                resp.setContentType("application/json");
-                out.println(reponse);
-            }
-            else if (reponse instanceof ModelView) {
+//            if (method.isRest) {
+//                resp.setContentType("application/json");
+//                out.println(reponse);
+//            }
+            if (reponse instanceof ModelView) {
                 ModelView mv = (ModelView) reponse;
                 RequestDispatcher dispatcher = getServletContext().getRequestDispatcher(mv.url);
 
@@ -147,11 +172,12 @@ public class FrontController extends HttpServlet {
 
             } else if (reponse instanceof String) {
                 try {
-                    out.println("URL : " + url + "\n");
+                    out.println(reponse);
+//                    out.println("URL : " + url + "\n");
                     // Affichage du nom de la methode et nom du controller
-                    out.println("Method: " + method.method + " ; Controller: " + method.controller);
-
-                    out.println("Contenu : " + reponse);
+//                    out.println("Method: " + req.getMethod() + " ; Controller: " + method.controller);
+//
+//                    out.println("Contenu : " + reponse);
                     return;
                 } catch (Exception e) {
                     throw new ServletException(e.getMessage());

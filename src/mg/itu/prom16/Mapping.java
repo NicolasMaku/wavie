@@ -3,9 +3,8 @@ package mg.itu.prom16;
 import com.google.gson.Gson;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
-import mg.itu.prom16.annotations.Get;
-import mg.itu.prom16.annotations.Model;
-import mg.itu.prom16.annotations.Param;
+import jakarta.servlet.http.HttpServletResponse;
+import mg.itu.prom16.annotations.*;
 import mg.itu.prom16.serializer.MyJson;
 import util.CustomSession;
 
@@ -14,16 +13,15 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.sql.Array;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Map;
+import java.util.*;
 
 public class Mapping {
     String controller;
-    String method;
-    Boolean isRest;
-    Class<?> verb;
+//    Boolean isRest;
+    List<VerbAction> verbActions;
 
     public String getController() {
         return controller;
@@ -33,196 +31,198 @@ public class Mapping {
         this.controller = controller;
     }
 
-    public String getMethod() {
-        return method;
+//    public Boolean getRest() {
+//        return isRest;
+//    }
+//
+//    public void setRest(Boolean rest) {
+//        isRest = rest;
+//    }
+
+    public List<VerbAction> getVerbActions() {
+        return verbActions;
     }
 
-    public void setMethod(String method) {
-        this.method = method;
-    }
-
-    public Boolean getRest() {
-        return isRest;
-    }
-
-    public void setRest(Boolean rest) {
-        isRest = rest;
-    }
-
-    public Class<?> getVerb() {
-        return verb;
-    }
-
-    public void setVerb(Class<?> verb) {
-        this.verb = verb;
+    public void setVerbActions(List<VerbAction> verbActions) {
+        this.verbActions = verbActions;
     }
 
     public Mapping(String controller, String method, Class<?> verb) {
         this.controller = controller;
-        this.method = method;
-        this.isRest = false;
-        this.verb = verb;
+//        this.isRest = false;
+        this.verbActions = new ArrayList<VerbAction>();
+    }
+
+    public Mapping(String controller) {
+        this.controller = controller;
+        this.verbActions = new ArrayList<VerbAction>();
     }
 
     @SuppressWarnings("deprecation")
-    public Object execMethod(HttpServletRequest req) throws ClassNotFoundException, NoSuchMethodException, InstantiationException, IllegalAccessException, InvocationTargetException, ServletException {
-        if (!this.verb.getSimpleName().equalsIgnoreCase(req.getMethod()))
+    public Object execMethod(HttpServletRequest req, HttpServletResponse resp) throws Exception {
+//        if (!this.getVerbActions().getVerb().getSimpleName().equalsIgnoreCase(req.getMethod()))
+
+        VerbAction action = this.isVerbAvalaible(req);
+        if (action == null)
             throw new ServletException("La methode http est differente de celle du controller (methode)");
 
-        System.out.println("interne : " + this.verb.getSimpleName());
-        System.out.println("http : " + req.getMethod());
+//        System.out.println("interne : " + this.getVerbAction().getVerb().getSimpleName());
+//        System.out.println("http : " + req.getMethod());
+//
+//        try {
+//            Class<?> clazz = Class.forName(controller);
+//
+//            Method[] methodes = clazz.getDeclaredMethods();
+//            Method oneMethod = null;
+//            CustomSession customSession = null;
+//
+//            for(Method meth : methodes) {
+//                if (meth.getName().equals(getVerbAction().getAction()))
+//                    oneMethod = meth;
+//            }
+//            Class<?>[] classes = oneMethod.getParameterTypes();
+//
+//            try {
+//
+//                assert oneMethod != null;
+//                Parameter[] parameters = oneMethod.getParameters();
+//                Object[] arguments = new Object[parameters.length];
+//                for (int i=0; i<parameters.length; i++) {
+//                    if (parameters[i].isAnnotationPresent(Param.class)) {
+//                        arguments[i] = parse(classes[i] ,req.getParameter(parameters[i].getAnnotation(Param.class).name()));
+//                    } else if (parameters[i].isAnnotationPresent(Model.class)) {
+//
+//                        try {
+//                            arguments[i] = getMethodObjet(parameters[i], req);
+//                        } catch (Exception e) {
+//                            throw new ServletException(e.getMessage());
+//                        }
+//                    } else if (parameters[i].getType().equals(CustomSession.class)) {
+//                        customSession = new CustomSession(req.getSession());
+////                        customSession.fromHttpSession(req.getSession());
+//                        arguments[i] = customSession;
+//                    } else {
+////                        arguments[i] = parse(classes[i] ,req.getParameter(parameters[i].getName()));
+//                        throw new ServletException("ETU002554 existe un argument qui n'est pas annotee");
+//                    }
+//                }
+//
+//                Object controllerInstance = clazz.newInstance();
+//
+//                // tester si la classe controller possede un attribut customSession
+//                Field[] fields = clazz.getDeclaredFields();
+//                for (Field field : fields) {
+//                    if (field.getType().equals(CustomSession.class)) {
+//                        customSession = new CustomSession(req.getSession());
+//                        field.setAccessible(true);
+//                        field.set(controllerInstance ,customSession);
+//                    }
+//                }
+//
+//
+//                Object retour = null;
+//                try {
+//                    retour =  oneMethod.invoke(controllerInstance,arguments);
+//                } catch (Exception e) {
+//                    e.printStackTrace();
+//                }
+//
+//
+//                if (oneMethod.isAnnotationPresent(Restapi.class)) {
+//                    MyJson gson = new MyJson();
+//                    retour = gson.getGson().toJson(retour);
+//                }
+//
+//                return retour;
+//            } catch (Exception e) {
+//                System.out.println("tato");
+//                throw new ServletException(e.getMessage());
+//            }
+//
+//
+//        } catch (Exception e) {
+//            throw new ServletException(e.getMessage());
+//        }
 
-        try {
-            Class<?> clazz = Class.forName(controller);
-
-            Method[] methodes = clazz.getDeclaredMethods();
-            Method oneMethod = null;
-            CustomSession customSession = null;
-
-            for(Method meth : methodes) {
-                if (meth.getName().equals(method))
-                    oneMethod = meth;
-            }
-            Class<?>[] classes = oneMethod.getParameterTypes();
-
-            try {
-
-                assert oneMethod != null;
-                Parameter[] parameters = oneMethod.getParameters();
-                Object[] arguments = new Object[parameters.length];
-                for (int i=0; i<parameters.length; i++) {
-                    if (parameters[i].isAnnotationPresent(Param.class)) {
-                        arguments[i] = parse(classes[i] ,req.getParameter(parameters[i].getAnnotation(Param.class).name()));
-                    } else if (parameters[i].isAnnotationPresent(Model.class)) {
-
-                        try {
-                            arguments[i] = getMethodObjet(parameters[i], req);
-                        } catch (Exception e) {
-                            throw new ServletException(e.getMessage());
-                        }
-                    } else if (parameters[i].getType().equals(CustomSession.class)) {
-                        customSession = new CustomSession(req.getSession());
-//                        customSession.fromHttpSession(req.getSession());
-                        arguments[i] = customSession;
-                    } else {
-//                        arguments[i] = parse(classes[i] ,req.getParameter(parameters[i].getName()));
-                        throw new ServletException("ETU002554 existe un argument qui n'est pas annotee");
-                    }
-                }
-
-                Object controllerInstance = clazz.newInstance();
-
-                // tester si la classe controller possede un attribut customSession
-                Field[] fields = clazz.getDeclaredFields();
-                for (Field field : fields) {
-                    if (field.getType().equals(CustomSession.class)) {
-                        customSession = new CustomSession(req.getSession());
-                        field.setAccessible(true);
-                        field.set(controllerInstance ,customSession);
-                    }
-                }
-
-
-                Object retour = null;
-                try {
-                    retour =  oneMethod.invoke(controllerInstance,arguments);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-
-
-                if (isRest) {
-                    MyJson gson = new MyJson();
-                    retour = gson.getGson().toJson(retour);
-                }
-
-                return retour;
-            } catch (Exception e) {
-                System.out.println("tato");
-                throw new ServletException(e.getMessage());
-            }
-
-
-        } catch (Exception e) {
-            throw new ServletException(e.getMessage());
-        }
+        return action.execMethod(req , resp, this.controller);
 
     }
 
-    @SuppressWarnings("deprecation")
-    Object getMethodObjet(Parameter parameter, HttpServletRequest req) throws ServletException {
-        Class<?> classeParametre = parameter.getType();
-        String prefix = parameter.getAnnotation(Model.class).value();
-        Field[] fields = classeParametre.getDeclaredFields();
-        Object objet = null;
-        try {
-            try { objet = classeParametre.newInstance(); } catch (Exception e) { throw new ServletException("Pas de constructeur par defaut"); }
+//    @SuppressWarnings("deprecation")
+//    Object getMethodObjet(Parameter parameter, HttpServletRequest req) throws ServletException {
+//        Class<?> classeParametre = parameter.getType();
+//        String prefix = parameter.getAnnotation(Model.class).value();
+//        Field[] fields = classeParametre.getDeclaredFields();
+//        Object objet = null;
+//        try {
+//            try { objet = classeParametre.newInstance(); } catch (Exception e) { throw new ServletException("Pas de constructeur par defaut"); }
+//
+//            Map<String, String[]> parameterMap = req.getParameterMap();
+//            for (Map.Entry<String, String[]> entry : parameterMap.entrySet()) {
+//
+//                Method setter = null;
+//                for(Field field: fields) {
+//                    if (( prefix + "." + field.getName()).equals(entry.getKey())) {
+//                        setter = searchMethod(classeParametre, "set" + capitalizeFirstLetter(field.getName()));
+//                    }
+//                }
+//
+//                if (setter == null) {
+//
+//                }
+//                else
+//                    setter.invoke(objet, parse(setter.getParameterTypes()[0],entry.getValue()[0]));
+//            }
+//
+//        } catch (Exception e) {
+//            throw new ServletException(e);
+//        }
+//        return objet;
+//    }
 
-            Map<String, String[]> parameterMap = req.getParameterMap();
-            for (Map.Entry<String, String[]> entry : parameterMap.entrySet()) {
+//    Method searchMethod(Class<?> clazz, String methodName) {
+//        Method[] listeMethode = clazz.getDeclaredMethods();
+//        for(Method meth : listeMethode) {
+//
+//            if (meth.getName().equals(methodName)) {
+//                return meth;
+//            }
+//        }
+//
+//        return null;
+//    }
 
-                Method setter = null;
-                for(Field field: fields) {
-                    if (( prefix + "." + field.getName()).equals(entry.getKey())) {
-                        setter = searchMethod(classeParametre, "set" + capitalizeFirstLetter(field.getName()));
-                    }
-                }
-
-                if (setter == null) {
-
-                }
-                else
-                    setter.invoke(objet, parse(setter.getParameterTypes()[0],entry.getValue()[0]));
-            }
-
-        } catch (Exception e) {
-            throw new ServletException(e);
-        }
-        return objet;
+    protected VerbAction isVerbAvalaible(HttpServletRequest req) throws Exception {
+        String httpVerb = req.getMethod();
+        Class<?> verb = findVerb(httpVerb);
+        return isVerbAvalaible(verb);
     }
 
-    public Object parse(Class<?> clazz, String value) throws ServletException {
-        if (clazz.equals(int.class)) {
-            try {
-                return Integer.parseInt(value);
-            } catch (NumberFormatException e) {
-                throw new ServletException("Veuiller entrer un nombre valide");
-            }
+    protected VerbAction isVerbAvalaible(Class<?> verb) throws Exception {
 
-        } else if (clazz.equals(String.class)) {
-            if (value.equals(""))
-                return "null";
-            return value;
-        } else if (clazz.equals(Date.class)) {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-            Date date = null;
-            try {
-                date = sdf.parse(value);
-            } catch (ParseException e) {
-                throw new ServletException("Le format de la date est fausse");
-            }
-            return date;
-        } else {
-            return clazz.cast(value);
-        }
-    }
-
-    Method searchMethod(Class<?> clazz, String methodName) {
-        Method[] listeMethode = clazz.getDeclaredMethods();
-        for(Method meth : listeMethode) {
-
-            if (meth.getName().equals(methodName)) {
-                return meth;
-            }
+        for (VerbAction va : verbActions) {
+            System.out.println(va.verb.getSimpleName() + " vs " + verb.getSimpleName());
+            if (verb.equals(va.verb))
+                return va;
         }
 
         return null;
     }
 
-    public static String capitalizeFirstLetter(String word) {
-        if (word == null || word.isEmpty()) {
-            return word;
-        }
-        return word.substring(0, 1).toUpperCase() + word.substring(1);
+    protected Class<?> findVerb(String httpVerb) throws Exception {
+        if (httpVerb.equalsIgnoreCase("get"))
+            return Get.class;
+        else if (httpVerb.equalsIgnoreCase("post"))
+            return Post.class;
+
+        System.out.println("LE IZY : " + httpVerb);
+        throw new Exception("Verb inconnu");
     }
+
+//    public static String capitalizeFirstLetter(String word) {
+//        if (word == null || word.isEmpty()) {
+//            return word;
+//        }
+//        return word.substring(0, 1).toUpperCase() + word.substring(1);
+//    }
 }
