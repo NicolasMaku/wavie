@@ -156,10 +156,7 @@ public class FrontController extends HttpServlet {
             } catch (Exception e) {
                 throw new ServletException(e.getMessage());
             }
-//            if (method.isRest) {
-//                resp.setContentType("application/json");
-//                out.println(reponse);
-//            }
+
             if (reponse instanceof ModelView) {
                 ModelView mv = (ModelView) reponse;
                 RequestDispatcher dispatcher = getServletContext().getRequestDispatcher(mv.url);

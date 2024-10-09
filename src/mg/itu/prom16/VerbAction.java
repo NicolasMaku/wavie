@@ -17,6 +17,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public class VerbAction extends HashMap<Class<?>, String> {
     Class<?> verb;
@@ -204,4 +205,22 @@ public class VerbAction extends HashMap<Class<?>, String> {
         return word.substring(0, 1).toUpperCase() + word.substring(1);
     }
 
+    @Override
+    public int hashCode() {
+        return Objects.hash(super.hashCode(), verb, action);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof VerbAction v))
+            return false;
+
+        if (this.verb.equals(v.verb) && Objects.equals(this.action, v.action))
+            return true;
+
+        if (this.action.equals(v.action))
+            return true;
+
+        return false;
+    }
 }
