@@ -8,6 +8,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import mg.itu.prom16.affichage.Errors;
 import mg.itu.prom16.annotations.*;
 
 import java.io.File;
@@ -24,6 +25,7 @@ import java.util.Map;
 public class FrontController extends HttpServlet {
     protected static List<Class<?>> controllerList = null;
     protected HashMap<String, Mapping> map = null;
+    protected Errors errors;
 
     @Override
     public void init(ServletConfig config) throws ServletException {
@@ -34,7 +36,10 @@ public class FrontController extends HttpServlet {
             getControllerList();
             // construire le hashmap
             buildControllerMap();
-        } catch (Exception e) {
+        } catch (Errors er) {
+            errors = er;
+        }
+        catch (Exception e) {
             throw new ServletException(e.getMessage());
         }
 
@@ -92,10 +97,11 @@ public class FrontController extends HttpServlet {
                     Class<?> verb = getVerb(method);
                     if (map.containsKey(urlValue)) {
                         element = map.get(urlValue);
-                        if (element.isVerbAvalaible(verb) == null) {
+                        VerbAction verbAction = new VerbAction(verb, method.getName());
+                        if (element.getVerbAction(verbAction) == null) {
                             element.getVerbActions().add(new VerbAction(verb, method.getName()));
                         }
-                        else throw new Exception("Doublons de url controller");
+                        else throw new Errors(500,"Doublons de methode(nom fonction) ou verb(GET,POST) dans le controller : " + urlValue);
                     }
                     else {
                         element = new Mapping(clazz.getName());
@@ -140,51 +146,62 @@ public class FrontController extends HttpServlet {
 
 
     protected void processRequest(HttpServletRequest req, HttpServletResponse resp) throws IOException, ServletException {
+        if (errors != null) {
+            errors.returnError(req,resp);
+            return;
+        }
+
+
         // Montrer l'url saisie
         String url = req.getRequestURI();
         resp.setCharacterEncoding("UTF-8");
         PrintWriter out = resp.getWriter();
 
         // Execution de la methode
-        if (get_method(url).isEmpty())
-            resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Aucune methode GET n'est disponible dans l'url " + url );
+        try {
+            if (get_method(url).isEmpty())
+                throw new Errors(404,  "Aucune methode n'est disponible dans l'url " + url );
+//            resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Aucune methode GET n'est disponible dans l'url " + url );
 
-        for (Mapping method : get_method(url)) {
-            Object reponse;
-            try {
-                reponse = method.execMethod(req, resp);
-            } catch (Exception e) {
-                throw new ServletException(e.getMessage());
-            }
-//            if (method.isRest) {
-//                resp.setContentType("application/json");
-//                out.println(reponse);
-//            }
-            if (reponse instanceof ModelView) {
-                ModelView mv = (ModelView) reponse;
-                RequestDispatcher dispatcher = getServletContext().getRequestDispatcher(mv.url);
-
-                for(Map.Entry<String , Object> entry : mv.data.entrySet()) {
-                    req.setAttribute(entry.getKey(), entry.getValue());
+            for (Mapping method : get_method(url)) {
+                Object reponse;
+                try {
+                    reponse = method.execMethod(req, resp);
+                } catch (Errors er) {
+                    throw er;
+                }
+                catch (Exception e) {
+                    throw new ServletException(e.getMessage());
                 }
 
-                dispatcher.forward(req,resp);
+                if (reponse instanceof ModelView) {
+                    ModelView mv = (ModelView) reponse;
+                    RequestDispatcher dispatcher = getServletContext().getRequestDispatcher(mv.url);
 
-            } else if (reponse instanceof String) {
-                try {
-                    out.println(reponse);
+                    for(Map.Entry<String , Object> entry : mv.data.entrySet()) {
+                        req.setAttribute(entry.getKey(), entry.getValue());
+                    }
+
+                    dispatcher.forward(req,resp);
+
+                } else if (reponse instanceof String) {
+                    try {
+                        out.println(reponse);
 //                    out.println("URL : " + url + "\n");
-                    // Affichage du nom de la methode et nom du controller
+                        // Affichage du nom de la methode et nom du controller
 //                    out.println("Method: " + req.getMethod() + " ; Controller: " + method.controller);
 //
 //                    out.println("Contenu : " + reponse);
-                    return;
-                } catch (Exception e) {
-                    throw new ServletException(e.getMessage());
+                        return;
+                    } catch (Exception e) {
+                        throw new ServletException(e.getMessage());
+                    }
+                } else {
+                    throw new Errors(500, "Le type de retour est inconnu");
                 }
-            } else {
-                throw new ServletException("Le type de retour est inconnu");
             }
+        } catch (Errors er) {
+            er.returnError(req, resp);
         }
 
     }

@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import mg.itu.prom16.affichage.Errors;
 import mg.itu.prom16.annotations.*;
 import mg.itu.prom16.serializer.MyJson;
 import util.CustomSession;
@@ -64,7 +65,7 @@ public class Mapping {
 
         VerbAction action = this.isVerbAvalaible(req);
         if (action == null)
-            throw new ServletException("La methode http est differente de celle du controller (methode)");
+            throw new Errors(404,"La methode http est differente de celle du controller (methode)");
 
 //        System.out.println("interne : " + this.getVerbAction().getVerb().getSimpleName());
 //        System.out.println("http : " + req.getMethod());
@@ -195,14 +196,23 @@ public class Mapping {
     protected VerbAction isVerbAvalaible(HttpServletRequest req) throws Exception {
         String httpVerb = req.getMethod();
         Class<?> verb = findVerb(httpVerb);
-        return isVerbAvalaible(verb);
-    }
-
-    protected VerbAction isVerbAvalaible(Class<?> verb) throws Exception {
 
         for (VerbAction va : verbActions) {
-            System.out.println(va.verb.getSimpleName() + " vs " + verb.getSimpleName());
-            if (verb.equals(va.verb))
+            if (va.verb.equals(verb))
+                return va;
+        }
+
+        return null;
+    }
+
+    protected VerbAction getVerbAction(VerbAction verbAction) throws Exception {
+
+        for (VerbAction va : verbActions) {
+            System.out.println(va.verb.getSimpleName() + " vs " + verbAction.verb.getSimpleName());
+            System.out.println("and " + va.action + " vs " + verbAction.action);
+//            if (verb.equals(va.verb))
+//                return va;
+            if (va.equals(verbAction))
                 return va;
         }
 
