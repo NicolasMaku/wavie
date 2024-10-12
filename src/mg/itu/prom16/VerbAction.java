@@ -3,6 +3,7 @@ package mg.itu.prom16;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import mg.itu.prom16.affichage.Errors;
 import mg.itu.prom16.annotations.Model;
 import mg.itu.prom16.annotations.Param;
 import mg.itu.prom16.annotations.Restapi;
@@ -84,7 +85,7 @@ public class VerbAction extends HashMap<Class<?>, String> {
                         arguments[i] = customSession;
                     } else {
 //                        arguments[i] = parse(classes[i] ,req.getParameter(parameters[i].getName()));
-                        throw new ServletException("ETU002554 existe un argument qui n'est pas annotee");
+                        throw new Errors( 500, "ETU002554 existe un argument qui n'est pas annotee");
                     }
                 }
 
@@ -116,13 +117,19 @@ public class VerbAction extends HashMap<Class<?>, String> {
                 }
 
                 return retour;
-            } catch (Exception e) {
+            } catch (Errors er) {
+                throw er;
+            }
+            catch (Exception e) {
                 System.out.println("tato");
                 throw new ServletException(e.getMessage());
             }
 
 
-        } catch (Exception e) {
+        } catch (Errors er) {
+            throw er;
+        }
+        catch (Exception e) {
             throw new ServletException(e.getMessage());
         }
 
@@ -218,7 +225,10 @@ public class VerbAction extends HashMap<Class<?>, String> {
         if (this.verb.equals(v.verb) && Objects.equals(this.action, v.action))
             return true;
 
-        if (this.action.equals(v.action))
+        if (this.verb.equals(v.verb))
+            return true;
+
+        if (this.action == v.action)
             return true;
 
         return false;

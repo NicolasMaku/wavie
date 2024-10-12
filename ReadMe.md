@@ -40,3 +40,13 @@ Sprin8:
 - Creer un moyen d'acceder à la session sans y toucher directement dans les methodes annoté controller
 - Creer la classe customSession qui sera notre intelocuteur entre l'HttpSession et notre methode
 - Un nouvel argument possible CustomSession session
+
+Sprint10:
+- Si meme url mais classe different alors erreur
+
+Sprint11:
+- gestion d'exception ajout de status code
+
+Sprint 12:
+Upload de fichier?
+Un fichier attaché à une requete
