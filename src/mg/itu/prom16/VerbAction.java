@@ -1,6 +1,7 @@
 package mg.itu.prom16;
 
 import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.Part;
@@ -23,6 +24,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+@MultipartConfig
 public class VerbAction extends HashMap<Class<?>, String> {
     Class<?> verb;
     String action;
@@ -191,14 +193,18 @@ public class VerbAction extends HashMap<Class<?>, String> {
                 for(Field field: fields) {
                     if (( prefix + "." + field.getName()).equals(entry.getKey())) {
                         setter = searchMethod(classeParametre, "set" + capitalizeFirstLetter(field.getName()));
+//                        System.out.println("----------------------------------------------- " + entry.getKey() + " : : " + entry.getValue()[0]);
+                        System.out.println("----------------------------------------------- " + prefix + "." + field.getName());
                     }
                 }
 
                 if (setter == null) {
 
                 }
-                else
-                    setter.invoke(objet, parse(setter.getParameterTypes()[0],entry.getValue()[0]));
+                else {
+                    setter.invoke(objet, parse(setter.getParameterTypes()[0], entry.getValue()[0]));
+                }
+
             }
 
             Field[] attributs = classeParametre.getDeclaredFields();
@@ -207,7 +213,7 @@ public class VerbAction extends HashMap<Class<?>, String> {
                     Method setter = searchMethod(classeParametre, "set" + capitalizeFirstLetter(attribut.getName()));
                     if (setter!=null) {
                         MyFile file = new MyFile();
-                        Part part = req.getPart(attribut.getName());
+                        Part part = req.getPart(prefix + "." +attribut.getName());
                         file.setFilename(extractFileName(part));
                         file.setInputStream(part.getInputStream());
                         setter.invoke(objet, file);

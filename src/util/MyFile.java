@@ -14,9 +14,18 @@ public class MyFile {
     InputStream inputStream;
 
     public void sauvegarder(String filepath) {
-        File saveFile = new File(filepath);
+        String filePos = filepath + "/" + filename;
+        File saveFile = new File(filePos);
+        if (!saveFile.exists()) {
+            try {
+                System.out.println("Creer file ---------------------------------------------");
+                saveFile.createNewFile();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
 
-        try (InputStream fileContent = inputStream; FileOutputStream outputStream = new FileOutputStream(filepath)){
+        try (InputStream fileContent = inputStream; FileOutputStream outputStream = new FileOutputStream(filePos)){
 
                 // Lire les données du fichier et les écrire dans le fichier de destination
                 byte[] buffer = new byte[1024];
