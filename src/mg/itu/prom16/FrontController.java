@@ -4,6 +4,7 @@ package mg.itu.prom16;
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -22,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@MultipartConfig
 public class FrontController extends HttpServlet {
     protected static List<Class<?>> controllerList = null;
     protected HashMap<String, Mapping> map = null;
