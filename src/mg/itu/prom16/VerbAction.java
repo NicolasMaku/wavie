@@ -3,13 +3,16 @@ package mg.itu.prom16;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.Part;
 import mg.itu.prom16.affichage.Errors;
 import mg.itu.prom16.annotations.Model;
 import mg.itu.prom16.annotations.Param;
 import mg.itu.prom16.annotations.Restapi;
 import mg.itu.prom16.serializer.MyJson;
 import util.CustomSession;
+import util.MyFile;
 
+import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -71,7 +74,16 @@ public class VerbAction extends HashMap<Class<?>, String> {
                 Object[] arguments = new Object[parameters.length];
                 for (int i=0; i<parameters.length; i++) {
                     if (parameters[i].isAnnotationPresent(Param.class)) {
-                        arguments[i] = parse(classes[i] ,req.getParameter(parameters[i].getAnnotation(Param.class).name()));
+                        String argumentName = parameters[i].getAnnotation(Param.class).name();
+                        if (classes[i] == MyFile.class) {
+                            String path = req.getServletContext().getContextPath() + "/files";
+
+                            MyFile file = new MyFile();
+                            Part part = req.getPart(argumentName);
+                            file.setFilename(extractFileName(part));
+                            file.setInputStream(part.getInputStream());
+
+                        } else arguments[i] = parse(classes[i] ,req.getParameter(argumentName));
                     } else if (parameters[i].isAnnotationPresent(Model.class)) {
 
                         try {
@@ -156,7 +168,8 @@ public class VerbAction extends HashMap<Class<?>, String> {
                 throw new ServletException("Le format de la date est fausse");
             }
             return date;
-        } else {
+        }
+        else {
             return clazz.cast(value);
         }
     }
@@ -167,6 +180,7 @@ public class VerbAction extends HashMap<Class<?>, String> {
         String prefix = parameter.getAnnotation(Model.class).value();
         Field[] fields = classeParametre.getDeclaredFields();
         Object objet = null;
+
         try {
             try { objet = classeParametre.newInstance(); } catch (Exception e) { throw new ServletException("Pas de constructeur par defaut"); }
 
@@ -185,6 +199,21 @@ public class VerbAction extends HashMap<Class<?>, String> {
                 }
                 else
                     setter.invoke(objet, parse(setter.getParameterTypes()[0],entry.getValue()[0]));
+            }
+
+            Field[] attributs = classeParametre.getDeclaredFields();
+            for (Field attribut : attributs) {
+                if (attribut.getType().equals(MyFile.class)) {
+                    Method setter = searchMethod(classeParametre, "set" + capitalizeFirstLetter(attribut.getName()));
+                    if (setter!=null) {
+                        MyFile file = new MyFile();
+                        Part part = req.getPart(attribut.getName());
+                        file.setFilename(extractFileName(part));
+                        file.setInputStream(part.getInputStream());
+                        setter.invoke(objet, file);
+                    }
+                }
+
             }
 
         } catch (Exception e) {
@@ -232,5 +261,16 @@ public class VerbAction extends HashMap<Class<?>, String> {
             return true;
 
         return false;
+    }
+
+    private String extractFileName(Part part) {
+        String contentDisposition = part.getHeader("content-disposition");
+        String[] items = contentDisposition.split(";");
+        for (String item : items) {
+            if (item.trim().startsWith("filename")) {
+                return item.substring(item.indexOf('=') + 2, item.length() - 1);
+            }
+        }
+        return "";
     }
 }
