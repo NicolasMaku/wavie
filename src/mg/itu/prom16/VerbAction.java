@@ -9,16 +9,22 @@ import mg.itu.prom16.affichage.Errors;
 import mg.itu.prom16.annotations.Model;
 import mg.itu.prom16.annotations.Param;
 import mg.itu.prom16.annotations.Restapi;
+import mg.itu.prom16.annotations.verification.DateFormat;
+import mg.itu.prom16.annotations.verification.Required;
 import mg.itu.prom16.serializer.MyJson;
 import util.CustomSession;
 import util.MyFile;
 
 import java.io.File;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -170,6 +176,12 @@ public class VerbAction extends HashMap<Class<?>, String> {
                 throw new ServletException("Le format de la date est fausse");
             }
             return date;
+        } else if (clazz.equals(LocalDate.class)) {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd"); // Format de la date
+
+            System.out.println("Said you never hurt me");
+            LocalDate localDate = LocalDate.parse(value, formatter);
+            return  localDate;
         }
         else {
             return clazz.cast(value);
@@ -206,6 +218,8 @@ public class VerbAction extends HashMap<Class<?>, String> {
                 }
 
             }
+
+            verifier(objet);
 
             Field[] attributs = classeParametre.getDeclaredFields();
             for (Field attribut : attributs) {
@@ -278,5 +292,34 @@ public class VerbAction extends HashMap<Class<?>, String> {
             }
         }
         return "";
+    }
+
+    private void verifier(Object obj) throws Exception {
+        Field[] fields = obj.getClass().getDeclaredFields();
+        for (Field field: fields) {
+            Annotation[] annotations = field.getDeclaredAnnotations();
+            field.setAccessible(true);
+
+            for (Annotation annot : annotations) {
+                if (annot instanceof DateFormat) {
+                    String date = (String) field.get(obj);
+                    String format = ((DateFormat) annot).format();
+
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern(format);
+                    try {
+                        LocalDate daty = LocalDate.parse(date, formatter);
+                    } catch (DateTimeParseException e) {
+                        throw new ServletException("Le format de la date est fausse : " + e.getMessage());
+                    }
+                } else if (annot instanceof Required) {
+                    System.out.println(field.getName());
+                    if (field.get(obj) == null)
+                        throw new ServletException("Le champs " + field.getName() + " est requis.");
+                    System.out.println(field.get(obj));
+                }
+            }
+
+
+        }
     }
 }
