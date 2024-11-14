@@ -10,6 +10,7 @@ import mg.itu.prom16.annotations.Model;
 import mg.itu.prom16.annotations.Param;
 import mg.itu.prom16.annotations.Restapi;
 import mg.itu.prom16.annotations.verification.DateFormat;
+import mg.itu.prom16.annotations.verification.Numeric;
 import mg.itu.prom16.annotations.verification.Required;
 import mg.itu.prom16.serializer.MyJson;
 import util.CustomSession;
@@ -312,10 +313,15 @@ public class VerbAction extends HashMap<Class<?>, String> {
                         throw new ServletException("Le format de la date est fausse : " + e.getMessage());
                     }
                 } else if (annot instanceof Required) {
-                    System.out.println(field.getName());
                     if (field.get(obj) == null)
                         throw new ServletException("Le champs " + field.getName() + " est requis.");
-                    System.out.println(field.get(obj));
+                } else if (annot instanceof Numeric) {
+                    try {
+                        String number = (String) field.get(obj);
+                        Double.parseDouble(number);
+                    } catch (Exception e) {
+                        throw new ServletException("Le champs " + field.getName() + " ne respcte pas sa nature Numeric.");
+                    }
                 }
             }
 

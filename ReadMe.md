@@ -55,4 +55,4 @@ Sprint 13:
 - Annotation pour la validation : @Numeric, @Required, @Date('dd-mm-yyyy')
 - Rechercher tous les annotations utiles pour la validation d'un input
 - Implementer dans le framework
-- Que j'ai éffectué: @Date
+- Que j'ai éffectué: @DateFormat, @Required, @Numeric 
