@@ -12,6 +12,7 @@ import mg.itu.prom16.annotations.Restapi;
 import mg.itu.prom16.annotations.verification.DateFormat;
 import mg.itu.prom16.annotations.verification.Numeric;
 import mg.itu.prom16.annotations.verification.Required;
+import mg.itu.prom16.annotations.verification.Size;
 import mg.itu.prom16.serializer.MyJson;
 import util.CustomSession;
 import util.MyFile;
@@ -298,10 +299,12 @@ public class VerbAction extends HashMap<Class<?>, String> {
     private void verifier(Object obj) throws Exception {
         Field[] fields = obj.getClass().getDeclaredFields();
         for (Field field: fields) {
+            System.out.println(field.getName());
             Annotation[] annotations = field.getDeclaredAnnotations();
             field.setAccessible(true);
 
             for (Annotation annot : annotations) {
+                System.out.println(annot.getClass().getSimpleName());
                 if (annot instanceof DateFormat) {
                     String date = (String) field.get(obj);
                     String format = ((DateFormat) annot).format();
@@ -322,6 +325,11 @@ public class VerbAction extends HashMap<Class<?>, String> {
                     } catch (Exception e) {
                         throw new ServletException("Le champs " + field.getName() + " ne respcte pas sa nature Numeric.");
                     }
+                } else if (annot instanceof Size) {
+                    String texte = (String) field.get(obj);
+                    Size size = ((Size) annot);
+                    if (texte.length() < size.min() || texte.length() > size.max())
+                        throw new ServletException("Le champs " + field.getName() + " ne respcte pas la taille imposee : " + size.min() +" < size <" + size.max() + ".");
                 }
             }
 
