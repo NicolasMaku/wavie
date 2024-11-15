@@ -56,3 +56,7 @@ Sprint 13:
 - Rechercher tous les annotations utiles pour la validation d'un input
 - Implementer dans le framework
 - Que j'ai éffectué: @DateFormat, @Required, @Numeric 
+
+Sprint 14:
+- Retour vers le formulaire avec valeur pré-defini
+- Show exception sur le formulaire
