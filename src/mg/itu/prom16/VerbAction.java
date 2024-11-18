@@ -13,6 +13,7 @@ import mg.itu.prom16.annotations.verification.DateFormat;
 import mg.itu.prom16.annotations.verification.Numeric;
 import mg.itu.prom16.annotations.verification.Required;
 import mg.itu.prom16.annotations.verification.Size;
+import mg.itu.prom16.exceptions.BadValidationException;
 import mg.itu.prom16.serializer.MyJson;
 import util.CustomSession;
 import util.MyFile;
@@ -191,7 +192,7 @@ public class VerbAction extends HashMap<Class<?>, String> {
     }
 
     @SuppressWarnings("deprecation")
-    Object getMethodObjet(Parameter parameter, HttpServletRequest req) throws ServletException {
+    Object getMethodObjet(Parameter parameter, HttpServletRequest req) throws ServletException, BadValidationException {
         Class<?> classeParametre = parameter.getType();
         String prefix = parameter.getAnnotation(Model.class).value();
         Field[] fields = classeParametre.getDeclaredFields();
@@ -238,6 +239,10 @@ public class VerbAction extends HashMap<Class<?>, String> {
 
             }
 
+        } catch (BadValidationException e) {
+            String referer = req.getHeader("Referer");
+            e.setReferer(referer);
+            throw e; 
         } catch (Exception e) {
             throw new ServletException(e);
         }
@@ -296,7 +301,7 @@ public class VerbAction extends HashMap<Class<?>, String> {
         return "";
     }
 
-    private void verifier(Object obj) throws Exception {
+    private void verifier(Object obj) throws BadValidationException, IllegalAccessException {
         Field[] fields = obj.getClass().getDeclaredFields();
         for (Field field: fields) {
             System.out.println(field.getName());
@@ -313,23 +318,23 @@ public class VerbAction extends HashMap<Class<?>, String> {
                     try {
                         LocalDate daty = LocalDate.parse(date, formatter);
                     } catch (DateTimeParseException e) {
-                        throw new ServletException("Le format de la date est fausse : " + e.getMessage());
+                        throw new BadValidationException("Le format de la date est fausse : " + e.getMessage());
                     }
                 } else if (annot instanceof Required) {
                     if (field.get(obj) == null)
-                        throw new ServletException("Le champs " + field.getName() + " est requis.");
+                        throw new BadValidationException("Le champs " + field.getName() + " est requis.");
                 } else if (annot instanceof Numeric) {
                     try {
                         String number = (String) field.get(obj);
                         Double.parseDouble(number);
                     } catch (Exception e) {
-                        throw new ServletException("Le champs " + field.getName() + " ne respcte pas sa nature Numeric.");
+                        throw new BadValidationException("Le champs " + field.getName() + " ne respcte pas sa nature Numeric.");
                     }
                 } else if (annot instanceof Size) {
                     String texte = (String) field.get(obj);
                     Size size = ((Size) annot);
                     if (texte.length() < size.min() || texte.length() > size.max())
-                        throw new ServletException("Le champs " + field.getName() + " ne respcte pas la taille imposee : " + size.min() +" < size <" + size.max() + ".");
+                        throw new BadValidationException("Le champs " + field.getName() + " ne respcte pas la taille imposee : " + size.min() +" < size <" + size.max() + ".");
                 }
             }
 
