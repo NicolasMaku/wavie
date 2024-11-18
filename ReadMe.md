@@ -50,3 +50,13 @@ Sprint11:
 Sprint 12:
 - Upload de fichier?
 Un fichier attaché à une requete
+
+Sprint 13:
+- Annotation pour la validation : @Numeric, @Required, @Date('dd-mm-yyyy')
+- Rechercher tous les annotations utiles pour la validation d'un input
+- Implementer dans le framework
+- Que j'ai éffectué: @DateFormat, @Required, @Numeric 
+
+Sprint 14:
+- Retour vers le formulaire avec valeur pré-defini
+- Show exception sur le formulaire
