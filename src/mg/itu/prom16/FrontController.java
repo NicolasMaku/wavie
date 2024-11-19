@@ -184,6 +184,11 @@ public class FrontController extends HttpServlet {
                         req.setAttribute(entry.getKey(), entry.getValue());
                     }
 
+                    if (req.getSession().getAttribute("badValidation") != null) {
+                        req.setAttribute("badValidation", req.getSession().getAttribute("badValidation"));
+                        req.setAttribute("formDataValidation", req.getSession().getAttribute("formDataValidation"));
+                    }
+
                     dispatcher.forward(req,resp);
 
                 } else if (reponse instanceof String) {

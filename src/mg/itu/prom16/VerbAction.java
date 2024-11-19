@@ -1,5 +1,6 @@
 package mg.itu.prom16;
 
+import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,10 +29,7 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 @MultipartConfig
 public class VerbAction extends HashMap<Class<?>, String> {
@@ -99,6 +97,14 @@ public class VerbAction extends HashMap<Class<?>, String> {
 
                         try {
                             arguments[i] = getMethodObjet(parameters[i], req);
+                        } catch (BadValidationException e) {
+//                            req.setAttribute("bad-validation", e.getErreurs());
+
+//                            RequestDispatcher requestDispatcher = req.getRequestDispatcher(e.getReferer());
+//                            requestDispatcher.forward(req, resp);
+                            req.getSession().setAttribute("formDataValidation", req.getParameterMap());
+                            req.getSession().setAttribute("badValidation", e.getErreurs());
+                            resp.sendRedirect(e.getReferer());
                         } catch (Exception e) {
                             throw new ServletException(e.getMessage());
                         }
@@ -222,7 +228,7 @@ public class VerbAction extends HashMap<Class<?>, String> {
 
             }
 
-            verifier(objet);
+            verifier(objet, prefix);
 
             Field[] attributs = classeParametre.getDeclaredFields();
             for (Field attribut : attributs) {
@@ -241,8 +247,12 @@ public class VerbAction extends HashMap<Class<?>, String> {
 
         } catch (BadValidationException e) {
             String referer = req.getHeader("Referer");
+            String projectName = req.getServletContext().getContextPath();
+            String[] splits = referer.split(projectName);
+            referer = splits[1];
+//            referer = referer.replace("http://localhost:8081/wavie", "");
             e.setReferer(referer);
-            throw e; 
+            throw e;
         } catch (Exception e) {
             throw new ServletException(e);
         }
@@ -301,12 +311,17 @@ public class VerbAction extends HashMap<Class<?>, String> {
         return "";
     }
 
-    private void verifier(Object obj) throws BadValidationException, IllegalAccessException {
+    private void verifier(Object obj, String formPrefix) throws BadValidationException, IllegalAccessException {
         Field[] fields = obj.getClass().getDeclaredFields();
+
+        Map<String, String> validationList = new HashMap<>();
+
         for (Field field: fields) {
             System.out.println(field.getName());
             Annotation[] annotations = field.getDeclaredAnnotations();
             field.setAccessible(true);
+
+            List<String> erreurs = new ArrayList<>();
 
             for (Annotation annot : annotations) {
                 System.out.println(annot.getClass().getSimpleName());
@@ -318,27 +333,32 @@ public class VerbAction extends HashMap<Class<?>, String> {
                     try {
                         LocalDate daty = LocalDate.parse(date, formatter);
                     } catch (DateTimeParseException e) {
-                        throw new BadValidationException("Le format de la date est fausse : " + e.getMessage());
+                        erreurs.add("Le format de la date est fausse");
                     }
                 } else if (annot instanceof Required) {
                     if (field.get(obj) == null)
-                        throw new BadValidationException("Le champs " + field.getName() + " est requis.");
+                        erreurs.add("Le champs " + field.getName() + " est requis.");
                 } else if (annot instanceof Numeric) {
                     try {
                         String number = (String) field.get(obj);
                         Double.parseDouble(number);
                     } catch (Exception e) {
-                        throw new BadValidationException("Le champs " + field.getName() + " ne respcte pas sa nature Numeric.");
+                        erreurs.add("Le champs " + field.getName() + " ne respcte pas sa nature Numeric.");
                     }
                 } else if (annot instanceof Size) {
                     String texte = (String) field.get(obj);
                     Size size = ((Size) annot);
                     if (texte.length() < size.min() || texte.length() > size.max())
-                        throw new BadValidationException("Le champs " + field.getName() + " ne respcte pas la taille imposee : " + size.min() +" < size <" + size.max() + ".");
+                        erreurs.add("Le champs " + field.getName() + " ne respcte pas la taille imposee : " + size.min() +" < size <" + size.max() + ".");
                 }
             }
 
-
+            String inputName = formPrefix + "." + field.getName();
+            validationList.put(inputName ,String.join("; ", erreurs));
         }
+
+        throw new BadValidationException(validationList);
+
+
     }
 }
