@@ -1,10 +1,23 @@
 package mg.itu.prom16;
 
+import mg.itu.prom16.affichage.Errors;
+
 import java.util.HashMap;
 
 public class ModelView {
     String url;
     HashMap<String, Object> data = new HashMap<>();
+
+    String ErrorUrl;
+
+    public String getErrorUrl() {
+        return ErrorUrl;
+    }
+
+    public void setErrorUrl(String errorUrl) {
+        ErrorUrl = errorUrl;
+    }
+
     public String getUrl() {
         return url;
     }

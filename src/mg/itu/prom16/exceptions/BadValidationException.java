@@ -17,8 +17,8 @@ public class BadValidationException extends Exception {
     }
 
     public BadValidationException(Map<String, String> erreurs) {
-        this.referer = referer;
-        this.erreurs = erreurs;
+        if (!erreurs.isEmpty())
+            this.erreurs = erreurs;
     }
 
     public Map<String, String> getErreurs() {

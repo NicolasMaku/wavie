@@ -10,10 +10,8 @@ import mg.itu.prom16.affichage.Errors;
 import mg.itu.prom16.annotations.Model;
 import mg.itu.prom16.annotations.Param;
 import mg.itu.prom16.annotations.Restapi;
-import mg.itu.prom16.annotations.verification.DateFormat;
-import mg.itu.prom16.annotations.verification.Numeric;
-import mg.itu.prom16.annotations.verification.Required;
-import mg.itu.prom16.annotations.verification.Size;
+import mg.itu.prom16.annotations.verification.*;
+import mg.itu.prom16.annotations.verification.RequestWrapper.MethodChangingRequestWrapper;
 import mg.itu.prom16.exceptions.BadValidationException;
 import mg.itu.prom16.serializer.MyJson;
 import util.CustomSession;
@@ -63,104 +61,109 @@ public class VerbAction extends HashMap<Class<?>, String> {
         System.out.println("interne : " + this.getVerb().getSimpleName());
         System.out.println("http : " + req.getMethod());
 
+        Class<?> clazz = Class.forName(controller);
+
+        Method[] methodes = clazz.getDeclaredMethods();
+        Method oneMethod = null;
+        CustomSession customSession = null;
+
+        for(Method meth : methodes) {
+            if (meth.getName().equals(getAction()))
+                oneMethod = meth;
+        }
+        Class<?>[] classes = oneMethod.getParameterTypes();
+
         try {
-            Class<?> clazz = Class.forName(controller);
 
-            Method[] methodes = clazz.getDeclaredMethods();
-            Method oneMethod = null;
-            CustomSession customSession = null;
+            assert oneMethod != null;
+            Parameter[] parameters = oneMethod.getParameters();
+            Object[] arguments = new Object[parameters.length];
+            for (int i=0; i<parameters.length; i++) {
+                if (parameters[i].isAnnotationPresent(Param.class)) {
+                    String argumentName = parameters[i].getAnnotation(Param.class).name();
+                    if (classes[i] == MyFile.class) {
+                        String path = req.getServletContext().getContextPath() + "/files";
 
-            for(Method meth : methodes) {
-                if (meth.getName().equals(getAction()))
-                    oneMethod = meth;
-            }
-            Class<?>[] classes = oneMethod.getParameterTypes();
+                        MyFile file = new MyFile();
+                        Part part = req.getPart(argumentName);
+                        file.setFilename(extractFileName(part));
+                        file.setInputStream(part.getInputStream());
 
-            try {
+                    } else arguments[i] = parse(classes[i] ,req.getParameter(argumentName));
+                } else if (parameters[i].isAnnotationPresent(Model.class)) {
 
-                assert oneMethod != null;
-                Parameter[] parameters = oneMethod.getParameters();
-                Object[] arguments = new Object[parameters.length];
-                for (int i=0; i<parameters.length; i++) {
-                    if (parameters[i].isAnnotationPresent(Param.class)) {
-                        String argumentName = parameters[i].getAnnotation(Param.class).name();
-                        if (classes[i] == MyFile.class) {
-                            String path = req.getServletContext().getContextPath() + "/files";
+                    try {
+                        arguments[i] = getMethodObjet(parameters[i], req);
+                    } catch (BadValidationException e) {
+                        req.setAttribute("bad-validation", e.getErreurs());
+                        req.setAttribute("formDataValidation", req.getParameterMap());
 
-                            MyFile file = new MyFile();
-                            Part part = req.getPart(argumentName);
-                            file.setFilename(extractFileName(part));
-                            file.setInputStream(part.getInputStream());
-
-                        } else arguments[i] = parse(classes[i] ,req.getParameter(argumentName));
-                    } else if (parameters[i].isAnnotationPresent(Model.class)) {
-
-                        try {
-                            arguments[i] = getMethodObjet(parameters[i], req);
-                        } catch (BadValidationException e) {
-//                            req.setAttribute("bad-validation", e.getErreurs());
-
+                        System.out.println("LIMONADE");
+//                        if (req.getMethod().equalsIgnoreCase("POST")) {
+//                            HttpServletRequest wrappedRequest = new MethodChangingRequestWrapper(req, "GET");
 //                            RequestDispatcher requestDispatcher = req.getRequestDispatcher(e.getReferer());
-//                            requestDispatcher.forward(req, resp);
-                            req.getSession().setAttribute("formDataValidation", req.getParameterMap());
-                            req.getSession().setAttribute("badValidation", e.getErreurs());
-                            resp.sendRedirect(e.getReferer());
-                        } catch (Exception e) {
-                            throw new ServletException(e.getMessage());
-                        }
-                    } else if (parameters[i].getType().equals(CustomSession.class)) {
-                        customSession = new CustomSession(req.getSession());
+//                            requestDispatcher.forward(wrappedRequest, resp);
+//                        }
+
+//                        RequestDispatcher requestDispatcher = req.getRequestDispatcher(e.getReferer());
+                        System.out.println("Va vers : " + oneMethod.getAnnotation(ValidationError.class).errorPath());
+                        RequestDispatcher requestDispatcher = req.getRequestDispatcher(oneMethod.getAnnotation(ValidationError.class).errorPath());
+                        requestDispatcher.forward(req, resp);
+//                        throw e;
+
+//                            req.getSession().setAttribute("formDataValidation", req.getParameterMap());
+//                            req.getSession().setAttribute("badValidation", e.getErreurs());
+//                            resp.sendRedirect(e.getReferer());
+                    } catch (Exception ex) {
+                        System.out.println("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ");
+                        throw new ServletException(ex.getMessage());
+                    }
+                } else if (parameters[i].getType().equals(CustomSession.class)) {
+                    customSession = new CustomSession(req.getSession());
 //                        customSession.fromHttpSession(req.getSession());
-                        arguments[i] = customSession;
-                    } else {
+                    arguments[i] = customSession;
+                } else {
 //                        arguments[i] = parse(classes[i] ,req.getParameter(parameters[i].getName()));
-                        throw new Errors( 500, "ETU002554 existe un argument qui n'est pas annotee");
-                    }
+                    throw new Errors( 500, "ETU002554 existe un argument qui n'est pas annotee");
                 }
-
-                Object controllerInstance = clazz.newInstance();
-
-                // tester si la classe controller possede un attribut customSession
-                Field[] fields = clazz.getDeclaredFields();
-                for (Field field : fields) {
-                    if (field.getType().equals(CustomSession.class)) {
-                        customSession = new CustomSession(req.getSession());
-                        field.setAccessible(true);
-                        field.set(controllerInstance ,customSession);
-                    }
-                }
-
-
-                Object retour = null;
-                try {
-                    retour =  oneMethod.invoke(controllerInstance,arguments);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-
-
-                if (oneMethod.isAnnotationPresent(Restapi.class)) {
-                    MyJson gson = new MyJson();
-                    retour = gson.getGson().toJson(retour);
-                    resp.setContentType("application/json");
-                }
-
-                return retour;
-            } catch (Errors er) {
-                throw er;
             }
-            catch (Exception e) {
-                System.out.println("tato");
-                throw new ServletException(e.getMessage());
+
+            Object controllerInstance = clazz.newInstance();
+
+            // tester si la classe controller possede un attribut customSession
+            Field[] fields = clazz.getDeclaredFields();
+            for (Field field : fields) {
+                if (field.getType().equals(CustomSession.class)) {
+                    customSession = new CustomSession(req.getSession());
+                    field.setAccessible(true);
+                    field.set(controllerInstance ,customSession);
+                }
             }
 
 
+            Object retour = null;
+            try {
+                retour =  oneMethod.invoke(controllerInstance,arguments);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+
+            if (oneMethod.isAnnotationPresent(Restapi.class)) {
+                MyJson gson = new MyJson();
+                retour = gson.getGson().toJson(retour);
+                resp.setContentType("application/json");
+            }
+
+            return retour;
         } catch (Errors er) {
             throw er;
         }
         catch (Exception e) {
-            throw new ServletException(e.getMessage());
+            System.out.println("tato");
+            throw e;
         }
+
 
     }
 
@@ -333,28 +336,35 @@ public class VerbAction extends HashMap<Class<?>, String> {
                     try {
                         LocalDate daty = LocalDate.parse(date, formatter);
                     } catch (DateTimeParseException e) {
+                        System.out.println("Le format de la date est fausse");
                         erreurs.add("Le format de la date est fausse");
                     }
                 } else if (annot instanceof Required) {
-                    if (field.get(obj) == null)
+                    if (field.get(obj) == null) {
+                        System.out.println("Le champs " + field.getName() + " est requis.");
                         erreurs.add("Le champs " + field.getName() + " est requis.");
+                    }
                 } else if (annot instanceof Numeric) {
                     try {
                         String number = (String) field.get(obj);
                         Double.parseDouble(number);
                     } catch (Exception e) {
+                        System.out.println("Le champs " + field.getName() + " ne respcte pas sa nature Numeric.");
                         erreurs.add("Le champs " + field.getName() + " ne respcte pas sa nature Numeric.");
                     }
                 } else if (annot instanceof Size) {
                     String texte = (String) field.get(obj);
                     Size size = ((Size) annot);
-                    if (texte.length() < size.min() || texte.length() > size.max())
-                        erreurs.add("Le champs " + field.getName() + " ne respcte pas la taille imposee : " + size.min() +" < size <" + size.max() + ".");
+                    if (texte.length() < size.min() || texte.length() > size.max()) {
+                        System.out.println("Le champs " + field.getName() + " ne respcte pas la taille imposee : " + size.min() + " < size <" + size.max() + ".");
+                        erreurs.add("Le champs " + field.getName() + " ne respcte pas la taille imposee : " + size.min() + " < size <" + size.max() + ".");
+                    }
                 }
             }
 
             String inputName = formPrefix + "." + field.getName();
-            validationList.put(inputName ,String.join("; ", erreurs));
+            if (!erreurs.isEmpty())
+                validationList.put(inputName ,String.join("; ", erreurs));
         }
 
         throw new BadValidationException(validationList);

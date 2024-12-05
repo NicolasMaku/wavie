@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import mg.itu.prom16.affichage.Errors;
 import mg.itu.prom16.annotations.*;
+import mg.itu.prom16.exceptions.BadValidationException;
 
 import java.io.File;
 import java.io.IOException;
@@ -152,6 +153,7 @@ public class FrontController extends HttpServlet {
             errors.returnError(req,resp);
             return;
         }
+        Boolean badValidation = false;
 
 
         // Montrer l'url saisie
@@ -166,9 +168,12 @@ public class FrontController extends HttpServlet {
 //            resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Aucune methode GET n'est disponible dans l'url " + url );
 
             for (Mapping method : get_method(url)) {
-                Object reponse;
+                Object reponse = null;
                 try {
                     reponse = method.execMethod(req, resp);
+                } catch (BadValidationException bv) {
+                    System.out.println("EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE");
+                    badValidation = true;
                 } catch (Errors er) {
                     throw er;
                 }
@@ -183,6 +188,9 @@ public class FrontController extends HttpServlet {
                     for(Map.Entry<String , Object> entry : mv.data.entrySet()) {
                         req.setAttribute(entry.getKey(), entry.getValue());
                     }
+
+                    if (badValidation)
+                        dispatcher = getServletContext().getRequestDispatcher(mv.getErrorUrl());
 
                     if (req.getSession().getAttribute("badValidation") != null) {
                         req.setAttribute("badValidation", req.getSession().getAttribute("badValidation"));
@@ -204,7 +212,7 @@ public class FrontController extends HttpServlet {
                         throw new ServletException(e.getMessage());
                     }
                 } else {
-                    throw new Errors(500, "Le type de retour est inconnu");
+                    throw new Errors(500, "Le type de retour est inconnu : " + reponse.getClass().getName());
                 }
             }
         } catch (Errors er) {
