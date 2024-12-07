@@ -95,8 +95,10 @@ public class VerbAction extends HashMap<Class<?>, String> {
                     try {
                         arguments[i] = getMethodObjet(parameters[i], req);
                     } catch (BadValidationException e) {
+                        System.out.println("ASKIP : " + e.getErreurs().size());
                         req.setAttribute("bad-validation", e.getErreurs());
                         req.setAttribute("formDataValidation", req.getParameterMap());
+                        req.setAttribute("validationException", e);
 
                         System.out.println("LIMONADE");
 //                        if (req.getMethod().equalsIgnoreCase("POST")) {
@@ -106,16 +108,16 @@ public class VerbAction extends HashMap<Class<?>, String> {
 //                        }
 
 //                        RequestDispatcher requestDispatcher = req.getRequestDispatcher(e.getReferer());
-                        System.out.println("Va vers : " + oneMethod.getAnnotation(ValidationError.class).errorPath());
-                        RequestDispatcher requestDispatcher = req.getRequestDispatcher(oneMethod.getAnnotation(ValidationError.class).errorPath());
-                        requestDispatcher.forward(req, resp);
+//                        System.out.println("Va vers : " + oneMethod.getAnnotation(ValidationError.class).errorPath());
+//                        RequestDispatcher requestDispatcher = req.getRequestDispatcher(oneMethod.getAnnotation(ValidationError.class).errorPath());
+//                        requestDispatcher.forward(req, resp);
 //                        throw e;
 
 //                            req.getSession().setAttribute("formDataValidation", req.getParameterMap());
 //                            req.getSession().setAttribute("badValidation", e.getErreurs());
 //                            resp.sendRedirect(e.getReferer());
                     } catch (Exception ex) {
-                        System.out.println("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ");
+//                        System.out.println("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ");
                         throw new ServletException(ex.getMessage());
                     }
                 } else if (parameters[i].getType().equals(CustomSession.class)) {
@@ -226,7 +228,11 @@ public class VerbAction extends HashMap<Class<?>, String> {
 
                 }
                 else {
-                    setter.invoke(objet, parse(setter.getParameterTypes()[0], entry.getValue()[0]));
+                    try {
+                        setter.invoke(objet, parse(setter.getParameterTypes()[0], entry.getValue()[0]));
+                    } catch (Exception e) {
+                        System.out.println("erreur lors du cast de : " + entry.getKey());
+                    }
                 }
 
             }
@@ -257,6 +263,7 @@ public class VerbAction extends HashMap<Class<?>, String> {
             e.setReferer(referer);
             throw e;
         } catch (Exception e) {
+            System.out.println("Nicolus");
             throw new ServletException(e);
         }
         return objet;
@@ -367,7 +374,8 @@ public class VerbAction extends HashMap<Class<?>, String> {
                 validationList.put(inputName ,String.join("; ", erreurs));
         }
 
-        throw new BadValidationException(validationList);
+        if (!validationList.isEmpty())
+            throw new BadValidationException(validationList);
 
 
     }

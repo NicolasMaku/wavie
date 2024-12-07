@@ -153,8 +153,7 @@ public class FrontController extends HttpServlet {
             errors.returnError(req,resp);
             return;
         }
-        Boolean badValidation = false;
-
+        Exception handlingException = null;
 
         // Montrer l'url saisie
         String url = req.getRequestURI();
@@ -171,9 +170,6 @@ public class FrontController extends HttpServlet {
                 Object reponse = null;
                 try {
                     reponse = method.execMethod(req, resp);
-                } catch (BadValidationException bv) {
-                    System.out.println("EEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEEE");
-                    badValidation = true;
                 } catch (Errors er) {
                     throw er;
                 }
@@ -183,19 +179,24 @@ public class FrontController extends HttpServlet {
 
                 if (reponse instanceof ModelView) {
                     ModelView mv = (ModelView) reponse;
-                    RequestDispatcher dispatcher = getServletContext().getRequestDispatcher(mv.url);
+
+                    RequestDispatcher dispatcher;
+
+                    if (mv.getErrorUrl() != null && req.getAttribute("validationException") != null) {
+                        System.out.println("redirigé");
+                        dispatcher = getServletContext().getRequestDispatcher(mv.getErrorUrl());
+                        dispatcher.forward(req,resp);
+                    }
+                    dispatcher = getServletContext().getRequestDispatcher(mv.url);
 
                     for(Map.Entry<String , Object> entry : mv.data.entrySet()) {
                         req.setAttribute(entry.getKey(), entry.getValue());
                     }
 
-                    if (badValidation)
-                        dispatcher = getServletContext().getRequestDispatcher(mv.getErrorUrl());
-
-                    if (req.getSession().getAttribute("badValidation") != null) {
-                        req.setAttribute("badValidation", req.getSession().getAttribute("badValidation"));
-                        req.setAttribute("formDataValidation", req.getSession().getAttribute("formDataValidation"));
-                    }
+//                    if (req.getAttribute("badValidation") != null) {
+//                        req.setAttribute("badValidation", req.getAttribute("badValidation"));
+//                        req.setAttribute("formDataValidation", req.getAttribute("formDataValidation"));
+//                    }
 
                     dispatcher.forward(req,resp);
 
