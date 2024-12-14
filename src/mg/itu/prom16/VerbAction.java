@@ -100,13 +100,6 @@ public class VerbAction extends HashMap<Class<?>, String> {
                         req.setAttribute("formDataValidation", req.getParameterMap());
                         req.setAttribute("validationException", e);
 
-                        System.out.println("LIMONADE");
-//                        if (req.getMethod().equalsIgnoreCase("POST")) {
-//                            HttpServletRequest wrappedRequest = new MethodChangingRequestWrapper(req, "GET");
-//                            RequestDispatcher requestDispatcher = req.getRequestDispatcher(e.getReferer());
-//                            requestDispatcher.forward(wrappedRequest, resp);
-//                        }
-
 //                        RequestDispatcher requestDispatcher = req.getRequestDispatcher(e.getReferer());
 //                        System.out.println("Va vers : " + oneMethod.getAnnotation(ValidationError.class).errorPath());
 //                        RequestDispatcher requestDispatcher = req.getRequestDispatcher(oneMethod.getAnnotation(ValidationError.class).errorPath());
@@ -117,7 +110,6 @@ public class VerbAction extends HashMap<Class<?>, String> {
 //                            req.getSession().setAttribute("badValidation", e.getErreurs());
 //                            resp.sendRedirect(e.getReferer());
                     } catch (Exception ex) {
-//                        System.out.println("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ");
                         throw new ServletException(ex.getMessage());
                     }
                 } else if (parameters[i].getType().equals(CustomSession.class)) {

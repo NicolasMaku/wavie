@@ -152,7 +152,7 @@ public class Mapping {
         catch (BadValidationException ex) {
             throw ex;
         } catch (Exception e) {
-            System.out.println("OOPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP : " + e.getClass().getName());
+//            System.out.println("OOPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP : " + e.getClass().getName());
             throw e;
         }
 
@@ -202,6 +202,12 @@ public class Mapping {
 //        return null;
 //    }
 
+    /**
+     * Solution au sprint 14
+     * @param req
+     * @return
+     * @throws Exception
+     */
     protected VerbAction isVerbAvalaible(HttpServletRequest req) throws Exception {
         String httpVerb = req.getMethod();
         Class<?> verb = findVerb(httpVerb);
@@ -210,15 +216,15 @@ public class Mapping {
             if (va.verb.equals(verb))
                 return va;
         }
-        if (httpVerb.equalsIgnoreCase("get"))
-            verb = Post.class;
-        else
-            verb = Get.class;
-
-        for (VerbAction va : verbActions) {
-            if (va.verb.equals(verb))
-                return va;
-        }
+//        if (httpVerb.equalsIgnoreCase("get"))
+//            verb = Post.class;
+//        else
+//            verb = Get.class;
+//
+//        for (VerbAction va : verbActions) {
+//            if (va.verb.equals(verb))
+//                return va;
+//        }
 
         return null;
     }

@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import mg.itu.prom16.affichage.Errors;
 import mg.itu.prom16.annotations.*;
+import mg.itu.prom16.annotations.verification.RequestWrapper.MethodChangingRequestWrapper;
 import mg.itu.prom16.exceptions.BadValidationException;
 
 import java.io.File;
@@ -184,8 +185,13 @@ public class FrontController extends HttpServlet {
 
                     if (mv.getErrorUrl() != null && req.getAttribute("validationException") != null) {
                         System.out.println("redirigé");
-                        dispatcher = getServletContext().getRequestDispatcher(mv.getErrorUrl());
-                        dispatcher.forward(req,resp);
+                        if (req.getMethod().equalsIgnoreCase("POST")) {
+                            HttpServletRequest wrappedRequest = new MethodChangingRequestWrapper(req, "GET");
+                            RequestDispatcher requestDispatcher = req.getRequestDispatcher(mv.getErrorUrl());
+                            requestDispatcher.forward(wrappedRequest, resp);
+                        }
+//                        dispatcher = getServletContext().getRequestDispatcher(mv.getErrorUrl());
+//                        dispatcher.forward(req,resp);
                     }
                     dispatcher = getServletContext().getRequestDispatcher(mv.url);
 
