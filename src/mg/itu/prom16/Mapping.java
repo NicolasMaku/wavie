@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import mg.itu.prom16.affichage.Errors;
 import mg.itu.prom16.annotations.*;
+import mg.itu.prom16.exceptions.BadValidationException;
 import mg.itu.prom16.serializer.MyJson;
 import util.CustomSession;
 
@@ -65,7 +66,7 @@ public class Mapping {
 
         VerbAction action = this.isVerbAvalaible(req);
         if (action == null)
-            throw new Errors(404,"La methode http est differente de celle du controller (methode)");
+            throw new Errors(404,"La methode http est differente de celle du controller (methode) : " + req.getMethod());
 
 //        System.out.println("interne : " + this.getVerbAction().getVerb().getSimpleName());
 //        System.out.println("http : " + req.getMethod());
@@ -145,7 +146,15 @@ public class Mapping {
 //            throw new ServletException(e.getMessage());
 //        }
 
-        return action.execMethod(req , resp, this.controller);
+        try {
+            return action.execMethod(req , resp, this.controller);
+        }
+        catch (BadValidationException ex) {
+            throw ex;
+        } catch (Exception e) {
+//            System.out.println("OOPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP : " + e.getClass().getName());
+            throw e;
+        }
 
     }
 
@@ -193,6 +202,12 @@ public class Mapping {
 //        return null;
 //    }
 
+    /**
+     * Solution au sprint 14
+     * @param req
+     * @return
+     * @throws Exception
+     */
     protected VerbAction isVerbAvalaible(HttpServletRequest req) throws Exception {
         String httpVerb = req.getMethod();
         Class<?> verb = findVerb(httpVerb);
@@ -201,6 +216,15 @@ public class Mapping {
             if (va.verb.equals(verb))
                 return va;
         }
+//        if (httpVerb.equalsIgnoreCase("get"))
+//            verb = Post.class;
+//        else
+//            verb = Get.class;
+//
+//        for (VerbAction va : verbActions) {
+//            if (va.verb.equals(verb))
+//                return va;
+//        }
 
         return null;
     }

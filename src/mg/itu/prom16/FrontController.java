@@ -11,6 +11,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import mg.itu.prom16.affichage.Errors;
 import mg.itu.prom16.annotations.*;
+import mg.itu.prom16.annotations.verification.RequestWrapper.MethodChangingRequestWrapper;
+import mg.itu.prom16.exceptions.BadValidationException;
 
 import java.io.File;
 import java.io.IOException;
@@ -152,7 +154,7 @@ public class FrontController extends HttpServlet {
             errors.returnError(req,resp);
             return;
         }
-
+        Exception handlingException = null;
 
         // Montrer l'url saisie
         String url = req.getRequestURI();
@@ -166,7 +168,7 @@ public class FrontController extends HttpServlet {
 //            resp.sendError(HttpServletResponse.SC_NOT_FOUND, "Aucune methode GET n'est disponible dans l'url " + url );
 
             for (Mapping method : get_method(url)) {
-                Object reponse;
+                Object reponse = null;
                 try {
                     reponse = method.execMethod(req, resp);
                 } catch (Errors er) {
@@ -178,11 +180,29 @@ public class FrontController extends HttpServlet {
 
                 if (reponse instanceof ModelView) {
                     ModelView mv = (ModelView) reponse;
-                    RequestDispatcher dispatcher = getServletContext().getRequestDispatcher(mv.url);
+
+                    RequestDispatcher dispatcher;
+
+                    if (mv.getErrorUrl() != null && req.getAttribute("validationException") != null) {
+                        System.out.println("redirigé");
+                        if (req.getMethod().equalsIgnoreCase("POST")) {
+                            HttpServletRequest wrappedRequest = new MethodChangingRequestWrapper(req, "GET");
+                            RequestDispatcher requestDispatcher = req.getRequestDispatcher(mv.getErrorUrl());
+                            requestDispatcher.forward(wrappedRequest, resp);
+                        }
+//                        dispatcher = getServletContext().getRequestDispatcher(mv.getErrorUrl());
+//                        dispatcher.forward(req,resp);
+                    }
+                    dispatcher = getServletContext().getRequestDispatcher(mv.url);
 
                     for(Map.Entry<String , Object> entry : mv.data.entrySet()) {
                         req.setAttribute(entry.getKey(), entry.getValue());
                     }
+
+//                    if (req.getAttribute("badValidation") != null) {
+//                        req.setAttribute("badValidation", req.getAttribute("badValidation"));
+//                        req.setAttribute("formDataValidation", req.getAttribute("formDataValidation"));
+//                    }
 
                     dispatcher.forward(req,resp);
 
@@ -199,7 +219,7 @@ public class FrontController extends HttpServlet {
                         throw new ServletException(e.getMessage());
                     }
                 } else {
-                    throw new Errors(500, "Le type de retour est inconnu");
+                    throw new Errors(500, "Le type de retour est inconnu : " + reponse.getClass().getName());
                 }
             }
         } catch (Errors er) {

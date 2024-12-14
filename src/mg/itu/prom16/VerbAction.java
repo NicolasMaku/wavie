@@ -1,5 +1,6 @@
 package mg.itu.prom16;
 
+import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.http.HttpServletRequest;
@@ -9,10 +10,8 @@ import mg.itu.prom16.affichage.Errors;
 import mg.itu.prom16.annotations.Model;
 import mg.itu.prom16.annotations.Param;
 import mg.itu.prom16.annotations.Restapi;
-import mg.itu.prom16.annotations.verification.DateFormat;
-import mg.itu.prom16.annotations.verification.Numeric;
-import mg.itu.prom16.annotations.verification.Required;
-import mg.itu.prom16.annotations.verification.Size;
+import mg.itu.prom16.annotations.verification.*;
+import mg.itu.prom16.annotations.verification.RequestWrapper.MethodChangingRequestWrapper;
 import mg.itu.prom16.exceptions.BadValidationException;
 import mg.itu.prom16.serializer.MyJson;
 import util.CustomSession;
@@ -28,10 +27,7 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 @MultipartConfig
 public class VerbAction extends HashMap<Class<?>, String> {
@@ -65,96 +61,103 @@ public class VerbAction extends HashMap<Class<?>, String> {
         System.out.println("interne : " + this.getVerb().getSimpleName());
         System.out.println("http : " + req.getMethod());
 
+        Class<?> clazz = Class.forName(controller);
+
+        Method[] methodes = clazz.getDeclaredMethods();
+        Method oneMethod = null;
+        CustomSession customSession = null;
+
+        for(Method meth : methodes) {
+            if (meth.getName().equals(getAction()))
+                oneMethod = meth;
+        }
+        Class<?>[] classes = oneMethod.getParameterTypes();
+
         try {
-            Class<?> clazz = Class.forName(controller);
 
-            Method[] methodes = clazz.getDeclaredMethods();
-            Method oneMethod = null;
-            CustomSession customSession = null;
+            assert oneMethod != null;
+            Parameter[] parameters = oneMethod.getParameters();
+            Object[] arguments = new Object[parameters.length];
+            for (int i=0; i<parameters.length; i++) {
+                if (parameters[i].isAnnotationPresent(Param.class)) {
+                    String argumentName = parameters[i].getAnnotation(Param.class).name();
+                    if (classes[i] == MyFile.class) {
+                        String path = req.getServletContext().getContextPath() + "/files";
 
-            for(Method meth : methodes) {
-                if (meth.getName().equals(getAction()))
-                    oneMethod = meth;
-            }
-            Class<?>[] classes = oneMethod.getParameterTypes();
+                        MyFile file = new MyFile();
+                        Part part = req.getPart(argumentName);
+                        file.setFilename(extractFileName(part));
+                        file.setInputStream(part.getInputStream());
 
-            try {
+                    } else arguments[i] = parse(classes[i] ,req.getParameter(argumentName));
+                } else if (parameters[i].isAnnotationPresent(Model.class)) {
 
-                assert oneMethod != null;
-                Parameter[] parameters = oneMethod.getParameters();
-                Object[] arguments = new Object[parameters.length];
-                for (int i=0; i<parameters.length; i++) {
-                    if (parameters[i].isAnnotationPresent(Param.class)) {
-                        String argumentName = parameters[i].getAnnotation(Param.class).name();
-                        if (classes[i] == MyFile.class) {
-                            String path = req.getServletContext().getContextPath() + "/files";
+                    try {
+                        arguments[i] = getMethodObjet(parameters[i], req);
+                    } catch (BadValidationException e) {
+                        System.out.println("ASKIP : " + e.getErreurs().size());
+                        req.setAttribute("bad-validation", e.getErreurs());
+                        req.setAttribute("formDataValidation", req.getParameterMap());
+                        req.setAttribute("validationException", e);
 
-                            MyFile file = new MyFile();
-                            Part part = req.getPart(argumentName);
-                            file.setFilename(extractFileName(part));
-                            file.setInputStream(part.getInputStream());
+//                        RequestDispatcher requestDispatcher = req.getRequestDispatcher(e.getReferer());
+//                        System.out.println("Va vers : " + oneMethod.getAnnotation(ValidationError.class).errorPath());
+//                        RequestDispatcher requestDispatcher = req.getRequestDispatcher(oneMethod.getAnnotation(ValidationError.class).errorPath());
+//                        requestDispatcher.forward(req, resp);
+//                        throw e;
 
-                        } else arguments[i] = parse(classes[i] ,req.getParameter(argumentName));
-                    } else if (parameters[i].isAnnotationPresent(Model.class)) {
-
-                        try {
-                            arguments[i] = getMethodObjet(parameters[i], req);
-                        } catch (Exception e) {
-                            throw new ServletException(e.getMessage());
-                        }
-                    } else if (parameters[i].getType().equals(CustomSession.class)) {
-                        customSession = new CustomSession(req.getSession());
+//                            req.getSession().setAttribute("formDataValidation", req.getParameterMap());
+//                            req.getSession().setAttribute("badValidation", e.getErreurs());
+//                            resp.sendRedirect(e.getReferer());
+                    } catch (Exception ex) {
+                        throw new ServletException(ex.getMessage());
+                    }
+                } else if (parameters[i].getType().equals(CustomSession.class)) {
+                    customSession = new CustomSession(req.getSession());
 //                        customSession.fromHttpSession(req.getSession());
-                        arguments[i] = customSession;
-                    } else {
+                    arguments[i] = customSession;
+                } else {
 //                        arguments[i] = parse(classes[i] ,req.getParameter(parameters[i].getName()));
-                        throw new Errors( 500, "ETU002554 existe un argument qui n'est pas annotee");
-                    }
+                    throw new Errors( 500, "ETU002554 existe un argument qui n'est pas annotee");
                 }
-
-                Object controllerInstance = clazz.newInstance();
-
-                // tester si la classe controller possede un attribut customSession
-                Field[] fields = clazz.getDeclaredFields();
-                for (Field field : fields) {
-                    if (field.getType().equals(CustomSession.class)) {
-                        customSession = new CustomSession(req.getSession());
-                        field.setAccessible(true);
-                        field.set(controllerInstance ,customSession);
-                    }
-                }
-
-
-                Object retour = null;
-                try {
-                    retour =  oneMethod.invoke(controllerInstance,arguments);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-
-
-                if (oneMethod.isAnnotationPresent(Restapi.class)) {
-                    MyJson gson = new MyJson();
-                    retour = gson.getGson().toJson(retour);
-                    resp.setContentType("application/json");
-                }
-
-                return retour;
-            } catch (Errors er) {
-                throw er;
             }
-            catch (Exception e) {
-                System.out.println("tato");
-                throw new ServletException(e.getMessage());
+
+            Object controllerInstance = clazz.newInstance();
+
+            // tester si la classe controller possede un attribut customSession
+            Field[] fields = clazz.getDeclaredFields();
+            for (Field field : fields) {
+                if (field.getType().equals(CustomSession.class)) {
+                    customSession = new CustomSession(req.getSession());
+                    field.setAccessible(true);
+                    field.set(controllerInstance ,customSession);
+                }
             }
 
 
+            Object retour = null;
+            try {
+                retour =  oneMethod.invoke(controllerInstance,arguments);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+
+            if (oneMethod.isAnnotationPresent(Restapi.class)) {
+                MyJson gson = new MyJson();
+                retour = gson.getGson().toJson(retour);
+                resp.setContentType("application/json");
+            }
+
+            return retour;
         } catch (Errors er) {
             throw er;
         }
         catch (Exception e) {
-            throw new ServletException(e.getMessage());
+            System.out.println("tato");
+            throw e;
         }
+
 
     }
 
@@ -217,12 +220,16 @@ public class VerbAction extends HashMap<Class<?>, String> {
 
                 }
                 else {
-                    setter.invoke(objet, parse(setter.getParameterTypes()[0], entry.getValue()[0]));
+                    try {
+                        setter.invoke(objet, parse(setter.getParameterTypes()[0], entry.getValue()[0]));
+                    } catch (Exception e) {
+                        System.out.println("erreur lors du cast de : " + entry.getKey());
+                    }
                 }
 
             }
 
-            verifier(objet);
+            verifier(objet, prefix);
 
             Field[] attributs = classeParametre.getDeclaredFields();
             for (Field attribut : attributs) {
@@ -241,9 +248,14 @@ public class VerbAction extends HashMap<Class<?>, String> {
 
         } catch (BadValidationException e) {
             String referer = req.getHeader("Referer");
+            String projectName = req.getServletContext().getContextPath();
+            String[] splits = referer.split(projectName);
+            referer = splits[1];
+//            referer = referer.replace("http://localhost:8081/wavie", "");
             e.setReferer(referer);
-            throw e; 
+            throw e;
         } catch (Exception e) {
+            System.out.println("Nicolus");
             throw new ServletException(e);
         }
         return objet;
@@ -301,12 +313,17 @@ public class VerbAction extends HashMap<Class<?>, String> {
         return "";
     }
 
-    private void verifier(Object obj) throws BadValidationException, IllegalAccessException {
+    private void verifier(Object obj, String formPrefix) throws BadValidationException, IllegalAccessException {
         Field[] fields = obj.getClass().getDeclaredFields();
+
+        Map<String, String> validationList = new HashMap<>();
+
         for (Field field: fields) {
             System.out.println(field.getName());
             Annotation[] annotations = field.getDeclaredAnnotations();
             field.setAccessible(true);
+
+            List<String> erreurs = new ArrayList<>();
 
             for (Annotation annot : annotations) {
                 System.out.println(annot.getClass().getSimpleName());
@@ -318,27 +335,40 @@ public class VerbAction extends HashMap<Class<?>, String> {
                     try {
                         LocalDate daty = LocalDate.parse(date, formatter);
                     } catch (DateTimeParseException e) {
-                        throw new BadValidationException("Le format de la date est fausse : " + e.getMessage());
+                        System.out.println("Le format de la date est fausse");
+                        erreurs.add("Le format de la date est fausse");
                     }
                 } else if (annot instanceof Required) {
-                    if (field.get(obj) == null)
-                        throw new BadValidationException("Le champs " + field.getName() + " est requis.");
+                    if (field.get(obj) == null) {
+                        System.out.println("Le champs " + field.getName() + " est requis.");
+                        erreurs.add("Le champs " + field.getName() + " est requis.");
+                    }
                 } else if (annot instanceof Numeric) {
                     try {
                         String number = (String) field.get(obj);
                         Double.parseDouble(number);
                     } catch (Exception e) {
-                        throw new BadValidationException("Le champs " + field.getName() + " ne respcte pas sa nature Numeric.");
+                        System.out.println("Le champs " + field.getName() + " ne respcte pas sa nature Numeric.");
+                        erreurs.add("Le champs " + field.getName() + " ne respcte pas sa nature Numeric.");
                     }
                 } else if (annot instanceof Size) {
                     String texte = (String) field.get(obj);
                     Size size = ((Size) annot);
-                    if (texte.length() < size.min() || texte.length() > size.max())
-                        throw new BadValidationException("Le champs " + field.getName() + " ne respcte pas la taille imposee : " + size.min() +" < size <" + size.max() + ".");
+                    if (texte.length() < size.min() || texte.length() > size.max()) {
+                        System.out.println("Le champs " + field.getName() + " ne respcte pas la taille imposee : " + size.min() + " < size <" + size.max() + ".");
+                        erreurs.add("Le champs " + field.getName() + " ne respcte pas la taille imposee : " + size.min() + " < size <" + size.max() + ".");
+                    }
                 }
             }
 
-
+            String inputName = formPrefix + "." + field.getName();
+            if (!erreurs.isEmpty())
+                validationList.put(inputName ,String.join("; ", erreurs));
         }
+
+        if (!validationList.isEmpty())
+            throw new BadValidationException(validationList);
+
+
     }
 }
