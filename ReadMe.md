@@ -60,3 +60,8 @@ Sprint 13:
 Sprint 14:
 - Retour vers le formulaire avec valeur pré-defini
 - Show exception sur le formulaire
+
+Sprint 15:
+- Utilisation de session
+- Une methode a un role (public, authentifié, Role spécifique)
+- Besoin d'authentification pour pouvoir appeller la methode.
