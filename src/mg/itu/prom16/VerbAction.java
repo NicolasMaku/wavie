@@ -33,6 +33,8 @@ import java.util.*;
 public class VerbAction extends HashMap<Class<?>, String> {
     Class<?> verb;
     String action;
+    String[] roles;
+    boolean authenticate = false;
 
     public VerbAction(Class<?> verb, String action) {
         this.verb = verb;
@@ -55,8 +57,55 @@ public class VerbAction extends HashMap<Class<?>, String> {
         this.action = action;
     }
 
+    public String[] getRoles() {
+        return roles;
+    }
+
+    public void setRoles(String[] roles) {
+        this.roles = roles;
+    }
+
+    public boolean isAuthenticate() {
+        return authenticate;
+    }
+
+    public void setAuthenticate(boolean authenticate) {
+        this.authenticate = authenticate;
+    }
+
     @SuppressWarnings("deprecation")
-    public Object execMethod(HttpServletRequest req, HttpServletResponse resp, String controller) throws Exception {
+    public Object execMethod(HttpServletRequest req, HttpServletResponse resp, String controller, Class<?> authClass) throws Exception {
+        if (authenticate) {
+            Object o = authClass.newInstance();
+            System.out.println("EEEEEEEEEEEEEEEXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX ");
+//            if (roles.length == 0 && (boolean) authClass.getMethod("isAuthenticated").invoke(o)) {
+            try {
+                authClass.getMethod("isAuthenticated", HttpServletRequest.class).invoke(o, req);
+            } catch (Exception e) {
+                System.out.println(o.getClass().getName());
+                e.printStackTrace();
+            }
+
+            if (roles.length == 0) {
+
+            } else {
+                System.out.println("Besoin d'authentification (n'importe)");
+                throw new ServletException("Besoin d'authentification (n'importe)");
+            }
+
+            if (roles.length > 0) {
+                boolean found = false;
+                String role = (String) authClass.getMethod("getRole").invoke(o);
+                for (int i = 0; i < roles.length; i++) {
+                    if (Objects.equals(roles[i], role)) {
+                        found = true;
+                    }
+                }
+
+                if (!found)
+                    throw new ServletException("Pas le bon role");
+            }
+        }
 
         System.out.println("interne : " + this.getVerb().getSimpleName());
         System.out.println("http : " + req.getMethod());

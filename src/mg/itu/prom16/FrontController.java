@@ -99,25 +99,46 @@ public class FrontController extends HttpServlet {
 //                    if (method.isAnnotationPresent(Restapi.class)) element.setRest(true);
 
                     Class<?> verb = getVerb(method);
+                    VerbAction verbAction = new VerbAction(verb, method.getName());
+                    if (method.isAnnotationPresent(Role.class)) {
+                        verbAction.setRoles(method.getAnnotation(Role.class).autorisee());
+                        verbAction.setAuthenticate(true);
+                        System.out.println("RRRRRRRRRRRRRRRRRRRRROOOOOOOOOOOOOOOOOOOOOOOLLLLLLLLLLLLLLLLLLLLLLLLLLLEEEEEEEEEEEEEEEEEEEEEE " + method.getName());
+                    }
+
                     if (map.containsKey(urlValue)) {
                         element = map.get(urlValue);
-                        VerbAction verbAction = new VerbAction(verb, method.getName());
+
                         if (element.getVerbAction(verbAction) == null) {
-                            element.getVerbActions().add(new VerbAction(verb, method.getName()));
+                            element.getVerbActions().add(verbAction);
                         }
                         else throw new Errors(500,"Doublons de methode(nom fonction) ou verb(GET,POST) dans le controller : " + urlValue);
                     }
                     else {
                         element = new Mapping(clazz.getName());
-                        element.verbActions.add(new VerbAction(verb, method.getName()));
-                        System.out.println("Nisy vaovao kaa");
+                        element.verbActions.add(verbAction);
                         map.put(urlValue, element);
                     }
 
                 }
+
+
+
             }
 
         }
+    }
+
+    private Class<?> authentificationHandlerClass() {
+        Class<?> handlerClass;
+        String handlerClassName = this.getInitParameter("authentification-handler");
+        try {
+            handlerClass = Class.forName(handlerClassName);
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+
+        return handlerClass;
     }
 
 //    protected boolean actionIsValid(String urlValue, Class<?> verb) {
@@ -170,7 +191,7 @@ public class FrontController extends HttpServlet {
             for (Mapping method : get_method(url)) {
                 Object reponse = null;
                 try {
-                    reponse = method.execMethod(req, resp);
+                    reponse = method.execMethod(req, resp, authentificationHandlerClass());
                 } catch (Errors er) {
                     throw er;
                 }

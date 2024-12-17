@@ -61,93 +61,15 @@ public class Mapping {
     }
 
     @SuppressWarnings("deprecation")
-    public Object execMethod(HttpServletRequest req, HttpServletResponse resp) throws Exception {
+    public Object execMethod(HttpServletRequest req, HttpServletResponse resp, Class<?> authClass) throws Exception {
 //        if (!this.getVerbActions().getVerb().getSimpleName().equalsIgnoreCase(req.getMethod()))
 
         VerbAction action = this.isVerbAvalaible(req);
         if (action == null)
             throw new Errors(404,"La methode http est differente de celle du controller (methode) : " + req.getMethod());
 
-//        System.out.println("interne : " + this.getVerbAction().getVerb().getSimpleName());
-//        System.out.println("http : " + req.getMethod());
-//
-//        try {
-//            Class<?> clazz = Class.forName(controller);
-//
-//            Method[] methodes = clazz.getDeclaredMethods();
-//            Method oneMethod = null;
-//            CustomSession customSession = null;
-//
-//            for(Method meth : methodes) {
-//                if (meth.getName().equals(getVerbAction().getAction()))
-//                    oneMethod = meth;
-//            }
-//            Class<?>[] classes = oneMethod.getParameterTypes();
-//
-//            try {
-//
-//                assert oneMethod != null;
-//                Parameter[] parameters = oneMethod.getParameters();
-//                Object[] arguments = new Object[parameters.length];
-//                for (int i=0; i<parameters.length; i++) {
-//                    if (parameters[i].isAnnotationPresent(Param.class)) {
-//                        arguments[i] = parse(classes[i] ,req.getParameter(parameters[i].getAnnotation(Param.class).name()));
-//                    } else if (parameters[i].isAnnotationPresent(Model.class)) {
-//
-//                        try {
-//                            arguments[i] = getMethodObjet(parameters[i], req);
-//                        } catch (Exception e) {
-//                            throw new ServletException(e.getMessage());
-//                        }
-//                    } else if (parameters[i].getType().equals(CustomSession.class)) {
-//                        customSession = new CustomSession(req.getSession());
-////                        customSession.fromHttpSession(req.getSession());
-//                        arguments[i] = customSession;
-//                    } else {
-////                        arguments[i] = parse(classes[i] ,req.getParameter(parameters[i].getName()));
-//                        throw new ServletException("ETU002554 existe un argument qui n'est pas annotee");
-//                    }
-//                }
-//
-//                Object controllerInstance = clazz.newInstance();
-//
-//                // tester si la classe controller possede un attribut customSession
-//                Field[] fields = clazz.getDeclaredFields();
-//                for (Field field : fields) {
-//                    if (field.getType().equals(CustomSession.class)) {
-//                        customSession = new CustomSession(req.getSession());
-//                        field.setAccessible(true);
-//                        field.set(controllerInstance ,customSession);
-//                    }
-//                }
-//
-//
-//                Object retour = null;
-//                try {
-//                    retour =  oneMethod.invoke(controllerInstance,arguments);
-//                } catch (Exception e) {
-//                    e.printStackTrace();
-//                }
-//
-//
-//                if (oneMethod.isAnnotationPresent(Restapi.class)) {
-//                    MyJson gson = new MyJson();
-//                    retour = gson.getGson().toJson(retour);
-//                }
-//
-//                return retour;
-//            } catch (Exception e) {
-//                System.out.println("tato");
-//                throw new ServletException(e.getMessage());
-//            }
-//
-//
-//        } catch (Exception e) {
-//            throw new ServletException(e.getMessage());
-//        }
-
         try {
-            return action.execMethod(req , resp, this.controller);
+            return action.execMethod(req , resp, this.controller, authClass);
         }
         catch (BadValidationException ex) {
             throw ex;
