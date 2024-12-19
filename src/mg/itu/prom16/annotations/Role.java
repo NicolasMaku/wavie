@@ -5,5 +5,5 @@ import java.lang.annotation.RetentionPolicy;
 
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Role {
-    String[] autorisee() default {};
+    String[] value() default {};
 }

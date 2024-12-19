@@ -132,6 +132,10 @@ public class Mapping {
      */
     protected VerbAction isVerbAvalaible(HttpServletRequest req) throws Exception {
         String httpVerb = req.getMethod();
+        return isVerbAvalaible(httpVerb);
+    }
+
+    protected VerbAction isVerbAvalaible(String httpVerb) throws Exception {
         Class<?> verb = findVerb(httpVerb);
 
         for (VerbAction va : verbActions) {
@@ -150,6 +154,7 @@ public class Mapping {
 
         return null;
     }
+
 
     protected VerbAction getVerbAction(VerbAction verbAction) throws Exception {
 
@@ -175,10 +180,4 @@ public class Mapping {
         throw new Exception("Verb inconnu");
     }
 
-//    public static String capitalizeFirstLetter(String word) {
-//        if (word == null || word.isEmpty()) {
-//            return word;
-//        }
-//        return word.substring(0, 1).toUpperCase() + word.substring(1);
-//    }
 }

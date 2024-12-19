@@ -1,4 +1,4 @@
-package mg.itu.prom16;
+package mg.itu.prom16.retourController;
 
 import mg.itu.prom16.affichage.Errors;
 import mg.itu.prom16.exceptions.BadValidationException;
@@ -47,4 +47,11 @@ public class ModelView {
         return validationException == null;
     };
 
+    public HashMap<String, Object> getData() {
+        return data;
+    }
+
+    public void setData(HashMap<String, Object> data) {
+        this.data = data;
+    }
 }

@@ -16,6 +16,7 @@ import mg.itu.prom16.exceptions.BadValidationException;
 import mg.itu.prom16.serializer.MyJson;
 import util.CustomSession;
 import util.MyFile;
+import util.Utility;
 
 import java.io.File;
 import java.lang.annotation.Annotation;
@@ -28,6 +29,8 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
+
+import static util.Utility.capitalizeFirstLetter;
 
 @MultipartConfig
 public class VerbAction extends HashMap<Class<?>, String> {
@@ -79,23 +82,26 @@ public class VerbAction extends HashMap<Class<?>, String> {
             Object o = authClass.newInstance();
             System.out.println("EEEEEEEEEEEEEEEXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX ");
 //            if (roles.length == 0 && (boolean) authClass.getMethod("isAuthenticated").invoke(o)) {
-            try {
-                authClass.getMethod("isAuthenticated", HttpServletRequest.class).invoke(o, req);
-            } catch (Exception e) {
-                System.out.println(o.getClass().getName());
-                e.printStackTrace();
-            }
+//                throw new ServletException("Besoin d'authentification (n'importe)");
+//            }
+//            try {
+//                System.out.println("Bool :: " + authClass.getMethod("isAuthenticated", HttpServletRequest.class).invoke(o, req));
+//            } catch (Exception e) {
+//                System.out.println(o.getClass().getName());
+//                e.printStackTrace();
+//            }
+            boolean bool = (boolean) authClass.getMethod("isAuthenticated", HttpServletRequest.class).invoke(o, req);
 
             if (roles.length == 0) {
-
-            } else {
-                System.out.println("Besoin d'authentification (n'importe)");
-                throw new ServletException("Besoin d'authentification (n'importe)");
+                if (!bool) {
+                    System.out.println("Besoin d'authentification (n'importe)");
+                    throw new ServletException("Besoin d'authentification (n'importe)");
+                }
             }
 
             if (roles.length > 0) {
                 boolean found = false;
-                String role = (String) authClass.getMethod("getRole").invoke(o);
+                String role = (String) authClass.getMethod("getRole", HttpServletRequest.class).invoke(o, req);
                 for (int i = 0; i < roles.length; i++) {
                     if (Objects.equals(roles[i], role)) {
                         found = true;
@@ -320,13 +326,6 @@ public class VerbAction extends HashMap<Class<?>, String> {
         }
 
         return null;
-    }
-
-    public static String capitalizeFirstLetter(String word) {
-        if (word == null || word.isEmpty()) {
-            return word;
-        }
-        return word.substring(0, 1).toUpperCase() + word.substring(1);
     }
 
     @Override
