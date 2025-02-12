@@ -65,3 +65,7 @@ Sprint 15:
 - Utilisation de session
 - Une methode a un role (public, authentifié, Role spécifique)
 - Besoin d'authentification pour pouvoir appeller la methode.
+
+Sprint 16:
+- les controller peuvent etre annotées avec un @Authorization
+- et @Anonimous sur fonction qui ne seront pas atteint par l'authorization
