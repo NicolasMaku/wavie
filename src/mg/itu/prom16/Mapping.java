@@ -73,9 +73,9 @@ public class Mapping {
         }
         catch (BadValidationException ex) {
             throw ex;
-        } catch (Exception e) {
+        } catch (ServletException e) {
 //            System.out.println("OOPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP : " + e.getClass().getName());
-            throw e;
+            throw new Errors(500,e.getMessage());
         }
 
     }

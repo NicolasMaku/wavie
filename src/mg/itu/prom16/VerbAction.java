@@ -90,7 +90,12 @@ public class VerbAction extends HashMap<Class<?>, String> {
 //                System.out.println(o.getClass().getName());
 //                e.printStackTrace();
 //            }
-            boolean bool = (boolean) authClass.getMethod("isAuthenticated", HttpServletRequest.class).invoke(o, req);
+            boolean bool = false;
+            try {
+                bool = (boolean) authClass.getMethod("isAuthenticated", HttpServletRequest.class).invoke(o, req);
+            } catch (Exception e) {
+                throw new ServletException(e.getMessage());
+            }
 
             if (roles.length == 0) {
                 if (!bool) {
@@ -101,15 +106,25 @@ public class VerbAction extends HashMap<Class<?>, String> {
 
             if (roles.length > 0) {
                 boolean found = false;
-                String role = (String) authClass.getMethod("getRole", HttpServletRequest.class).invoke(o, req);
+                String role = null;
+                try {
+                    role = (String) authClass.getMethod("getRole", HttpServletRequest.class).invoke(o, req);;
+                } catch (Exception e) {
+                    // Pas besoin de faire quelque chose
+                }
+                if (role == null)
+                    throw new Errors(500, "role inexistant veuillez vous loger");
+
                 for (int i = 0; i < roles.length; i++) {
                     if (Objects.equals(roles[i], role)) {
                         found = true;
                     }
                 }
 
-                if (!found)
+                if (!found) {
+                    System.out.println("Pas le bon role");
                     throw new ServletException("Pas le bon role");
+                }
             }
         }
 
