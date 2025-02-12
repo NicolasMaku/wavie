@@ -8,18 +8,16 @@ import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 import mg.itu.prom16.affichage.Errors;
 import mg.itu.prom16.annotations.*;
 import mg.itu.prom16.annotations.verification.RequestWrapper.MethodChangingRequestWrapper;
-import mg.itu.prom16.exceptions.BadValidationException;
+import mg.itu.prom16.retourController.ModelView;
+import util.Utility;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -99,25 +97,46 @@ public class FrontController extends HttpServlet {
 //                    if (method.isAnnotationPresent(Restapi.class)) element.setRest(true);
 
                     Class<?> verb = getVerb(method);
+                    VerbAction verbAction = new VerbAction(verb, method.getName());
+                    if (method.isAnnotationPresent(Role.class)) {
+                        verbAction.setRoles(method.getAnnotation(Role.class).value());
+                        verbAction.setAuthenticate(true);
+                        System.out.println("RRRRRRRRRRRRRRRRRRRRROOOOOOOOOOOOOOOOOOOOOOOLLLLLLLLLLLLLLLLLLLLLLLLLLLEEEEEEEEEEEEEEEEEEEEEE " + method.getName());
+                    }
+
                     if (map.containsKey(urlValue)) {
                         element = map.get(urlValue);
-                        VerbAction verbAction = new VerbAction(verb, method.getName());
+
                         if (element.getVerbAction(verbAction) == null) {
-                            element.getVerbActions().add(new VerbAction(verb, method.getName()));
+                            element.getVerbActions().add(verbAction);
                         }
                         else throw new Errors(500,"Doublons de methode(nom fonction) ou verb(GET,POST) dans le controller : " + urlValue);
                     }
                     else {
                         element = new Mapping(clazz.getName());
-                        element.verbActions.add(new VerbAction(verb, method.getName()));
-                        System.out.println("Nisy vaovao kaa");
+                        element.verbActions.add(verbAction);
                         map.put(urlValue, element);
                     }
 
                 }
+
+
+
             }
 
         }
+    }
+
+    private Class<?> authentificationHandlerClass() {
+        Class<?> handlerClass;
+        String handlerClassName = this.getInitParameter("authentification-handler");
+        try {
+            handlerClass = Class.forName(handlerClassName);
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+
+        return handlerClass;
     }
 
 //    protected boolean actionIsValid(String urlValue, Class<?> verb) {
@@ -170,7 +189,7 @@ public class FrontController extends HttpServlet {
             for (Mapping method : get_method(url)) {
                 Object reponse = null;
                 try {
-                    reponse = method.execMethod(req, resp);
+                    reponse = method.execMethod(req, resp, authentificationHandlerClass());
                 } catch (Errors er) {
                     throw er;
                 }
@@ -193,9 +212,9 @@ public class FrontController extends HttpServlet {
 //                        dispatcher = getServletContext().getRequestDispatcher(mv.getErrorUrl());
 //                        dispatcher.forward(req,resp);
                     }
-                    dispatcher = getServletContext().getRequestDispatcher(mv.url);
+                    dispatcher = getServletContext().getRequestDispatcher(mv.getUrl());
 
-                    for(Map.Entry<String , Object> entry : mv.data.entrySet()) {
+                    for(Map.Entry<String , Object> entry : mv.getData().entrySet()) {
                         req.setAttribute(entry.getKey(), entry.getValue());
                     }
 
@@ -208,6 +227,16 @@ public class FrontController extends HttpServlet {
 
                 } else if (reponse instanceof String) {
                     try {
+                        String redirectStr = (String) reponse;
+                        if ((redirectStr).contains("redirect:")) {
+                            String controllerUrl = Utility.getRedirectController(redirectStr);
+//                            Mapping mapping = get_method(controllerUrl).get(0);
+//                            mapping.
+                            HttpServletRequest wrappedRequest = new MethodChangingRequestWrapper(req, "GET");
+                            RequestDispatcher requestDispatcher = req.getRequestDispatcher(controllerUrl);
+                            requestDispatcher.forward(wrappedRequest, resp);
+                        }
+
                         out.println(reponse);
 //                    out.println("URL : " + url + "\n");
                         // Affichage du nom de la methode et nom du controller

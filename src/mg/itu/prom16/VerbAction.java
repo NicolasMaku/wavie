@@ -16,6 +16,7 @@ import mg.itu.prom16.exceptions.BadValidationException;
 import mg.itu.prom16.serializer.MyJson;
 import util.CustomSession;
 import util.MyFile;
+import util.Utility;
 
 import java.io.File;
 import java.lang.annotation.Annotation;
@@ -29,10 +30,14 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
 
+import static util.Utility.capitalizeFirstLetter;
+
 @MultipartConfig
 public class VerbAction extends HashMap<Class<?>, String> {
     Class<?> verb;
     String action;
+    String[] roles;
+    boolean authenticate = false;
 
     public VerbAction(Class<?> verb, String action) {
         this.verb = verb;
@@ -55,8 +60,58 @@ public class VerbAction extends HashMap<Class<?>, String> {
         this.action = action;
     }
 
+    public String[] getRoles() {
+        return roles;
+    }
+
+    public void setRoles(String[] roles) {
+        this.roles = roles;
+    }
+
+    public boolean isAuthenticate() {
+        return authenticate;
+    }
+
+    public void setAuthenticate(boolean authenticate) {
+        this.authenticate = authenticate;
+    }
+
     @SuppressWarnings("deprecation")
-    public Object execMethod(HttpServletRequest req, HttpServletResponse resp, String controller) throws Exception {
+    public Object execMethod(HttpServletRequest req, HttpServletResponse resp, String controller, Class<?> authClass) throws Exception {
+        if (authenticate) {
+            Object o = authClass.newInstance();
+            System.out.println("EEEEEEEEEEEEEEEXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX ");
+//            if (roles.length == 0 && (boolean) authClass.getMethod("isAuthenticated").invoke(o)) {
+//                throw new ServletException("Besoin d'authentification (n'importe)");
+//            }
+//            try {
+//                System.out.println("Bool :: " + authClass.getMethod("isAuthenticated", HttpServletRequest.class).invoke(o, req));
+//            } catch (Exception e) {
+//                System.out.println(o.getClass().getName());
+//                e.printStackTrace();
+//            }
+            boolean bool = (boolean) authClass.getMethod("isAuthenticated", HttpServletRequest.class).invoke(o, req);
+
+            if (roles.length == 0) {
+                if (!bool) {
+                    System.out.println("Besoin d'authentification (n'importe)");
+                    throw new ServletException("Besoin d'authentification (n'importe)");
+                }
+            }
+
+            if (roles.length > 0) {
+                boolean found = false;
+                String role = (String) authClass.getMethod("getRole", HttpServletRequest.class).invoke(o, req);
+                for (int i = 0; i < roles.length; i++) {
+                    if (Objects.equals(roles[i], role)) {
+                        found = true;
+                    }
+                }
+
+                if (!found)
+                    throw new ServletException("Pas le bon role");
+            }
+        }
 
         System.out.println("interne : " + this.getVerb().getSimpleName());
         System.out.println("http : " + req.getMethod());
@@ -271,13 +326,6 @@ public class VerbAction extends HashMap<Class<?>, String> {
         }
 
         return null;
-    }
-
-    public static String capitalizeFirstLetter(String word) {
-        if (word == null || word.isEmpty()) {
-            return word;
-        }
-        return word.substring(0, 1).toUpperCase() + word.substring(1);
     }
 
     @Override
