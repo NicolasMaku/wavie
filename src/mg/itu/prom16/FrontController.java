@@ -244,6 +244,7 @@ public class FrontController extends HttpServlet {
                             String controllerUrl = Utility.getRedirectController(redirectStr);
 //                            Mapping mapping = get_method(controllerUrl).get(0);
 //                            mapping.
+
                             HttpServletRequest wrappedRequest = new MethodChangingRequestWrapper(req, "GET");
                             RequestDispatcher requestDispatcher = req.getRequestDispatcher(controllerUrl);
                             requestDispatcher.forward(wrappedRequest, resp);
