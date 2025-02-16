@@ -80,7 +80,7 @@ public class VerbAction extends HashMap<Class<?>, String> {
     public Object execMethod(HttpServletRequest req, HttpServletResponse resp, String controller, Class<?> authClass) throws Exception {
         if (authenticate) {
             Object o = authClass.newInstance();
-            System.out.println("EEEEEEEEEEEEEEEXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX ");
+//            System.out.println("EEEEEEEEEEEEEEEXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX ");
 //            if (roles.length == 0 && (boolean) authClass.getMethod("isAuthenticated").invoke(o)) {
 //                throw new ServletException("Besoin d'authentification (n'importe)");
 //            }
@@ -90,7 +90,12 @@ public class VerbAction extends HashMap<Class<?>, String> {
 //                System.out.println(o.getClass().getName());
 //                e.printStackTrace();
 //            }
-            boolean bool = (boolean) authClass.getMethod("isAuthenticated", HttpServletRequest.class).invoke(o, req);
+            boolean bool = false;
+            try {
+                bool = (boolean) authClass.getMethod("isAuthenticated", HttpServletRequest.class).invoke(o, req);
+            } catch (Exception e) {
+                throw new ServletException(e.getMessage());
+            }
 
             if (roles.length == 0) {
                 if (!bool) {
@@ -101,15 +106,25 @@ public class VerbAction extends HashMap<Class<?>, String> {
 
             if (roles.length > 0) {
                 boolean found = false;
-                String role = (String) authClass.getMethod("getRole", HttpServletRequest.class).invoke(o, req);
+                String role = null;
+                try {
+                    role = (String) authClass.getMethod("getRole", HttpServletRequest.class).invoke(o, req);;
+                } catch (Exception e) {
+                    // Pas besoin de faire quelque chose
+                }
+                if (role == null)
+                    throw new Errors(500, "role inexistant veuillez vous loger");
+
                 for (int i = 0; i < roles.length; i++) {
                     if (Objects.equals(roles[i], role)) {
                         found = true;
                     }
                 }
 
-                if (!found)
+                if (!found) {
+                    System.out.println("Pas le bon role");
                     throw new ServletException("Pas le bon role");
+                }
             }
         }
 
@@ -136,15 +151,24 @@ public class VerbAction extends HashMap<Class<?>, String> {
             for (int i=0; i<parameters.length; i++) {
                 if (parameters[i].isAnnotationPresent(Param.class)) {
                     String argumentName = parameters[i].getAnnotation(Param.class).name();
-                    if (classes[i] == MyFile.class) {
-                        String path = req.getServletContext().getContextPath() + "/files";
+                    if (argumentName.contains("[]")) {
+                        if (req.getParameterValues(argumentName) == null)
+                            arguments[i] = null;
+                        else arguments[i] = parseTab(classes[i] ,req.getParameterValues(argumentName));
+                    } else {
+                        if (classes[i] == MyFile.class) {
+                            String path = req.getServletContext().getContextPath() + "/files";
 
-                        MyFile file = new MyFile();
-                        Part part = req.getPart(argumentName);
-                        file.setFilename(extractFileName(part));
-                        file.setInputStream(part.getInputStream());
+                            MyFile file = new MyFile();
+                            Part part = req.getPart(argumentName);
+                            file.setFilename(extractFileName(part));
+                            file.setInputStream(part.getInputStream());
 
-                    } else arguments[i] = parse(classes[i] ,req.getParameter(argumentName));
+                        } else if (req.getParameter(argumentName) == null) {
+                            arguments[i] = null;
+                        } else arguments[i] = parse(classes[i] ,req.getParameter(argumentName));
+                    }
+
                 } else if (parameters[i].isAnnotationPresent(Model.class)) {
 
                     try {
@@ -217,13 +241,19 @@ public class VerbAction extends HashMap<Class<?>, String> {
     }
 
     public Object parse(Class<?> clazz, String value) throws ServletException {
-        if (clazz.equals(int.class)) {
+        if (clazz.equals(int.class) || clazz.equals(Integer.class)) {
             try {
                 return Integer.parseInt(value);
             } catch (NumberFormatException e) {
                 throw new ServletException("Veuiller entrer un nombre valide");
             }
 
+        } else if (clazz.equals(double.class) || clazz.equals(Double.class)) {
+            try {
+                return Double.parseDouble(value);
+            } catch (NumberFormatException e) {
+                throw new ServletException("Veuiller entrer un nombre à virgule valide");
+            }
         } else if (clazz.equals(String.class)) {
             if (value.equals(""))
                 return "null";
@@ -248,6 +278,68 @@ public class VerbAction extends HashMap<Class<?>, String> {
             return clazz.cast(value);
         }
     }
+
+    public Object[] parseTab(Class<?> clazz, String[] value) throws ServletException {
+        if (clazz.isArray()) {
+            // Vérifie le type du tableau
+            Class<?> componentType = clazz.getComponentType();
+
+            if (componentType.equals(Integer.class) || componentType.equals(int.class)) {
+                Integer[] resultArray = new Integer[value.length];
+                for (int i = 0; i < value.length; i++) {
+                    try {
+                        resultArray[i] = Integer.parseInt(value[i]);
+                    } catch (NumberFormatException e) {
+                        throw new ServletException("Veuillez entrer un nombre valide à l'indice " + i);
+                    }
+                }
+                return resultArray;
+            } else if (componentType.equals(Double.class) || componentType.equals(double.class)) {
+                Double[] resultArray = new Double[value.length];
+                for (int i = 0; i < value.length; i++) {
+                    try {
+                        resultArray[i] = Double.parseDouble(value[i]);
+                    } catch (NumberFormatException e) {
+                        throw new ServletException("Veuillez entrer un nombre décimal valide à l'indice " + i);
+                    }
+                }
+                return resultArray;
+            } else if (componentType.equals(String.class)) {
+                return value;
+            } else if (componentType.equals(Date.class)) {
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+                Date[] resultArray = new Date[value.length];
+                for (int i = 0; i < value.length; i++) {
+                    try {
+                        resultArray[i] = sdf.parse(value[i]);
+                    } catch (ParseException e) {
+                        throw new ServletException("Le format de la date est incorrect à l'indice " + i);
+                    }
+                }
+                return resultArray;
+            } else if (componentType.equals(LocalDate.class)) {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+                LocalDate[] resultArray = new LocalDate[value.length];
+                for (int i = 0; i < value.length; i++) {
+                    try {
+                        resultArray[i] = LocalDate.parse(value[i], formatter);
+                    } catch (Exception e) {
+                        throw new ServletException("Le format de la date est incorrect à l'indice " + i);
+                    }
+                }
+                return resultArray;
+            } else {
+                Object[] resultArray = new Object[value.length];
+                for (int i = 0; i < value.length; i++) {
+                    resultArray[i] = componentType.cast(value[i]);
+                }
+                return resultArray;
+            }
+        } else {
+            throw new ServletException("Le type spécifié n'est pas un tableau");
+        }
+    }
+
 
     @SuppressWarnings("deprecation")
     Object getMethodObjet(Parameter parameter, HttpServletRequest req) throws ServletException, BadValidationException {

@@ -86,6 +86,12 @@ public class FrontController extends HttpServlet {
     private void buildControllerMap() throws Exception {
         map = new HashMap<>();
         for (Class<?> clazz : controllerList) {
+            String[] authorizedForClass = null;
+
+            if (clazz.isAnnotationPresent(Authorization.class)) {
+                authorizedForClass = clazz.getAnnotation(Authorization.class).value();
+            }
+
             for (Method method : clazz.getDeclaredMethods()) {
                 if (method.getAnnotations().length == 0) {
                     continue;
@@ -98,7 +104,13 @@ public class FrontController extends HttpServlet {
 
                     Class<?> verb = getVerb(method);
                     VerbAction verbAction = new VerbAction(verb, method.getName());
-                    if (method.isAnnotationPresent(Role.class)) {
+                    if (authorizedForClass != null) {
+                        if (!method.isAnnotationPresent(Anonymous.class)) {
+                            verbAction.setRoles(authorizedForClass);
+                            verbAction.setAuthenticate(true);
+                            System.out.println("RRRRRRRRRRRRRRRRRRRRROOOOOOOOOOOOOOOOOOOOOOOLLLLLLLLLLLLLLLLLLLLLLLLLLLEEEEEEEEEEEEEEEEEEEEEE " + method.getName());
+                        }
+                    } else if (method.isAnnotationPresent(Role.class)) {
                         verbAction.setRoles(method.getAnnotation(Role.class).value());
                         verbAction.setAuthenticate(true);
                         System.out.println("RRRRRRRRRRRRRRRRRRRRROOOOOOOOOOOOOOOOOOOOOOOLLLLLLLLLLLLLLLLLLLLLLLLLLLEEEEEEEEEEEEEEEEEEEEEE " + method.getName());
@@ -232,6 +244,7 @@ public class FrontController extends HttpServlet {
                             String controllerUrl = Utility.getRedirectController(redirectStr);
 //                            Mapping mapping = get_method(controllerUrl).get(0);
 //                            mapping.
+
                             HttpServletRequest wrappedRequest = new MethodChangingRequestWrapper(req, "GET");
                             RequestDispatcher requestDispatcher = req.getRequestDispatcher(controllerUrl);
                             requestDispatcher.forward(wrappedRequest, resp);
