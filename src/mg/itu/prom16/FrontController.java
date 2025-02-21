@@ -213,6 +213,16 @@ public class FrontController extends HttpServlet {
                     ModelView mv = (ModelView) reponse;
 
                     RequestDispatcher dispatcher;
+                    if (mv.getUrl().contains("redirect:")) {
+                        String controllerUrl = Utility.getRedirectController(mv.getUrl());
+
+//                        HttpServletRequest wrappedRequest = new MethodChangingRequestWrapper(req, "GET");
+//                        RequestDispatcher requestDispatcher = req.getRequestDispatcher(controllerUrl);
+//                        requestDispatcher.forward(wrappedRequest, resp);
+
+                        resp.sendRedirect(controllerUrl);
+                        return;
+                    }
 
                     if (mv.getErrorUrl() != null && req.getAttribute("validationException") != null) {
                         System.out.println("redirigé");
@@ -236,6 +246,7 @@ public class FrontController extends HttpServlet {
 //                    }
 
                     dispatcher.forward(req,resp);
+
 
                 } else if (reponse instanceof String) {
                     try {

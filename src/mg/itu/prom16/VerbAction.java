@@ -163,7 +163,7 @@ public class VerbAction extends HashMap<Class<?>, String> {
                             Part part = req.getPart(argumentName);
                             file.setFilename(extractFileName(part));
                             file.setInputStream(part.getInputStream());
-
+                            arguments[i] = file;
                         } else if (req.getParameter(argumentName) == null) {
                             arguments[i] = null;
                         } else arguments[i] = parse(classes[i] ,req.getParameter(argumentName));
