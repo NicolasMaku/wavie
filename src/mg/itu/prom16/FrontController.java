@@ -16,6 +16,7 @@ import util.Utility;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -189,8 +190,6 @@ public class FrontController extends HttpServlet {
 
         // Montrer l'url saisie
         String url = req.getRequestURI();
-        resp.setCharacterEncoding("UTF-8");
-        PrintWriter out = resp.getWriter();
 
         // Execution de la methode
         try {
@@ -249,6 +248,9 @@ public class FrontController extends HttpServlet {
 
 
                 } else if (reponse instanceof String) {
+                    resp.setCharacterEncoding("UTF-8");
+                    PrintWriter out = resp.getWriter();
+
                     try {
                         String redirectStr = (String) reponse;
                         if ((redirectStr).contains("redirect:")) {
@@ -271,6 +273,19 @@ public class FrontController extends HttpServlet {
                     } catch (Exception e) {
                         throw new ServletException(e.getMessage());
                     }
+                } else if (reponse instanceof byte[]) {
+                    byte[] pdfBytes = (byte[]) reponse;
+                    System.out.println("IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII" + pdfBytes.length);
+
+                    resp.setContentType("application/pdf");
+                    resp.setHeader("Content-Disposition", "attachment; filename=reservation.pdf");
+                    resp.setContentLength(pdfBytes.length);
+
+                    try (OutputStream outStr = resp.getOutputStream()) {
+                        outStr.write(pdfBytes);
+                        outStr.flush();
+                    }
+                    return;
                 } else {
                     throw new Errors(500, "Le type de retour est inconnu : " + reponse.getClass().getName());
                 }

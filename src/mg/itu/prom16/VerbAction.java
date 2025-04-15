@@ -9,6 +9,7 @@ import jakarta.servlet.http.Part;
 import mg.itu.prom16.affichage.Errors;
 import mg.itu.prom16.annotations.Model;
 import mg.itu.prom16.annotations.Param;
+import mg.itu.prom16.annotations.PdfDownload;
 import mg.itu.prom16.annotations.Restapi;
 import mg.itu.prom16.annotations.verification.*;
 import mg.itu.prom16.annotations.verification.RequestWrapper.MethodChangingRequestWrapper;
@@ -148,6 +149,9 @@ public class VerbAction extends HashMap<Class<?>, String> {
             assert oneMethod != null;
             Parameter[] parameters = oneMethod.getParameters();
             Object[] arguments = new Object[parameters.length];
+            Map<String, String> errors = null;
+            Map<String, String[]> formData = null;
+
             for (int i=0; i<parameters.length; i++) {
                 if (parameters[i].isAnnotationPresent(Param.class)) {
                     String argumentName = parameters[i].getAnnotation(Param.class).name();
@@ -226,6 +230,16 @@ public class VerbAction extends HashMap<Class<?>, String> {
                 MyJson gson = new MyJson();
                 retour = gson.getGson().toJson(retour);
                 resp.setContentType("application/json");
+            }
+
+            if (oneMethod.isAnnotationPresent(PdfDownload.class)) {
+                byte[] pdf = (byte[]) retour;
+
+                String pdfName = oneMethod.getDeclaredAnnotation(PdfDownload.class).value();
+
+                resp.setContentType("application/pdf");
+                resp.setHeader("Content-Disposition", "attachment; filename=reservation" + pdfName + ".pdf");
+                resp.setContentLength(pdf.length);
             }
 
             return retour;
@@ -358,8 +372,7 @@ public class VerbAction extends HashMap<Class<?>, String> {
                 for(Field field: fields) {
                     if (( prefix + "." + field.getName()).equals(entry.getKey())) {
                         setter = searchMethod(classeParametre, "set" + capitalizeFirstLetter(field.getName()));
-//                        System.out.println("----------------------------------------------- " + entry.getKey() + " : : " + entry.getValue()[0]);
-                        System.out.println("----------------------------------------------- " + prefix + "." + field.getName());
+//                        System.out.println("----------------------------------------------- " + prefix + "." + field.getName());
                     }
                 }
 
@@ -479,7 +492,7 @@ public class VerbAction extends HashMap<Class<?>, String> {
                         erreurs.add("Le format de la date est fausse");
                     }
                 } else if (annot instanceof Required) {
-                    if (field.get(obj) == null) {
+                    if (field.get(obj) == null || (field.getType().equals(String.class) && field.get(obj) == "")) {
                         System.out.println("Le champs " + field.getName() + " est requis.");
                         erreurs.add("Le champs " + field.getName() + " est requis.");
                     }

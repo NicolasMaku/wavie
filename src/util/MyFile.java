@@ -3,11 +3,13 @@ package util;
 import jakarta.servlet.annotation.MultipartConfig;
 
 import java.io.*;
+import java.util.Base64;
 
 @MultipartConfig
 public class MyFile {
     String filename;
     InputStream inputStream;
+    byte[] bytes;
 
     public void sauvegarder(String filepath) {
         String filePos = filepath + "/" + filename;
@@ -61,5 +63,18 @@ public class MyFile {
 
     public void setInputStream(InputStream inputStream) {
         this.inputStream = inputStream;
+    }
+
+    public MyFile() {
+    }
+
+    public MyFile(String filename, byte[] bytes) {
+        this.filename = filename;
+        this.bytes = bytes;
+        this.inputStream = new ByteArrayInputStream(bytes);
+    }
+
+    public String convertirByteArrayEnBase64() {
+        return Base64.getEncoder().encodeToString(this.bytes);
     }
 }
