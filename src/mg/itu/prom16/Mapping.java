@@ -61,7 +61,7 @@ public class Mapping {
     }
 
     @SuppressWarnings("deprecation")
-    public Object execMethod(HttpServletRequest req, HttpServletResponse resp, Class<?> authClass) throws Exception {
+    public Object execMethod(HttpServletRequest req, HttpServletResponse resp , Class<?> authClass) throws Exception {
 //        if (!this.getVerbActions().getVerb().getSimpleName().equalsIgnoreCase(req.getMethod()))
 
         VerbAction action = this.isVerbAvalaible(req);

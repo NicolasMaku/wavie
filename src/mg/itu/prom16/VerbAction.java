@@ -7,10 +7,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.Part;
 import mg.itu.prom16.affichage.Errors;
-import mg.itu.prom16.annotations.Model;
-import mg.itu.prom16.annotations.Param;
-import mg.itu.prom16.annotations.PdfDownload;
-import mg.itu.prom16.annotations.Restapi;
+import mg.itu.prom16.annotations.*;
 import mg.itu.prom16.annotations.verification.*;
 import mg.itu.prom16.annotations.verification.RequestWrapper.MethodChangingRequestWrapper;
 import mg.itu.prom16.exceptions.BadValidationException;
@@ -19,6 +16,7 @@ import util.CustomSession;
 import util.MyFile;
 import util.Utility;
 
+import javax.swing.*;
 import java.io.File;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
@@ -117,6 +115,7 @@ public class VerbAction extends HashMap<Class<?>, String> {
                     throw new Errors(500, "role inexistant veuillez vous loger");
 
                 for (int i = 0; i < roles.length; i++) {
+                    System.out.println(roles[i]);
                     if (Objects.equals(roles[i], role)) {
                         found = true;
                     }
@@ -124,6 +123,7 @@ public class VerbAction extends HashMap<Class<?>, String> {
 
                 if (!found) {
                     System.out.println("Pas le bon role");
+                    System.out.println(role);
                     throw new ServletException("Pas le bon role");
                 }
             }
@@ -199,6 +199,9 @@ public class VerbAction extends HashMap<Class<?>, String> {
                     customSession = new CustomSession(req.getSession());
 //                        customSession.fromHttpSession(req.getSession());
                     arguments[i] = customSession;
+                } else if (parameters[i].isAnnotationPresent(StaticValue.class)) {
+                    String key = parameters[i].getAnnotation(StaticValue.class).value();
+                    arguments[i] = FrontController.staticValues.get(key);
                 } else {
 //                        arguments[i] = parse(classes[i] ,req.getParameter(parameters[i].getName()));
                     throw new Errors( 500, "ETU002554 existe un argument qui n'est pas annotee");

@@ -19,16 +19,15 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @MultipartConfig
 public class FrontController extends HttpServlet {
     protected static List<Class<?>> controllerList = null;
     protected HashMap<String, Mapping> map = null;
     protected Errors errors;
+//    public static String apiUrl = null;
+    public static Map<String, String> staticValues = new HashMap<>();
 
     @Override
     public void init(ServletConfig config) throws ServletException {
@@ -37,8 +36,11 @@ public class FrontController extends HttpServlet {
         try {
             // Determiner la listes des controllers
             getControllerList();
+
             // construire le hashmap
             buildControllerMap();
+            staticValues = fetchStaticValues();
+//            apiUrl = this.getInitParameter("urlapi");
         } catch (Errors er) {
             errors = er;
         }
@@ -46,7 +48,18 @@ public class FrontController extends HttpServlet {
             throw new ServletException(e.getMessage());
         }
 
+    }
 
+    protected Map<String, String> fetchStaticValues() {
+        Map<String, String> staticValues = new HashMap<>();
+
+        Enumeration<String> parameters = this.getInitParameterNames();
+        while(parameters.hasMoreElements()) {
+            String key = parameters.nextElement();
+            staticValues.put(key, this.getInitParameter(key));
+        }
+
+        return staticValues;
     }
 
     private void getControllerList() throws Exception {
