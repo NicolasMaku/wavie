@@ -11,6 +11,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import mg.itu.prom16.affichage.Errors;
 import mg.itu.prom16.annotations.*;
 import mg.itu.prom16.annotations.verification.RequestWrapper.MethodChangingRequestWrapper;
+import mg.itu.prom16.retourController.Exportable;
 import mg.itu.prom16.retourController.ModelView;
 import util.Utility;
 
@@ -296,6 +297,18 @@ public class FrontController extends HttpServlet {
 
                     try (OutputStream outStr = resp.getOutputStream()) {
                         outStr.write(pdfBytes);
+                        outStr.flush();
+                    }
+                    return;
+                } else if (reponse instanceof Exportable) {
+                    Exportable toExport = (Exportable) reponse;
+
+                    resp.setContentType(toExport.getContentType());
+                    resp.setHeader("Content-Disposition", "attachment; filename=" + toExport.getFilename());
+                    resp.setContentLength(toExport.getContent().length);
+
+                    try (OutputStream outStr = resp.getOutputStream()) {
+                        outStr.write(toExport.getContent());
                         outStr.flush();
                     }
                     return;
