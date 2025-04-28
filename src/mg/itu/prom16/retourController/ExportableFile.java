@@ -1,6 +1,6 @@
 package mg.itu.prom16.retourController;
 
-public class Exportable {
+public class ExportableFile {
     String filename;
     String contentType;
     Object data;
