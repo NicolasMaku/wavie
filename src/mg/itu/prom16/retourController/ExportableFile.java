@@ -37,4 +37,12 @@ public class ExportableFile {
     public void setContent(byte[] content) {
         this.content = content;
     }
+
+    public ExportableFile() {
+    }
+
+    public ExportableFile(String filename, String contentType) {
+        this.filename = filename;
+        this.contentType = contentType;
+    }
 }
